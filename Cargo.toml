@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-subxt = "0.31"
+subxt = {version = "0.31", features = ["jsonrpsee"]}
 tokio = { version = "1.32.0", features = ["rt-multi-thread"] }
 
 async-trait = "0.1.73"
