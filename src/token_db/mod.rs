@@ -109,8 +109,7 @@ impl PSP22Contract {
             .metadata
             .as_ref()
             .map(|m| m.symbol.clone().unwrap_or_default())
-            .unwrap_or_else(|| "UNKNOWN".to_string())
-            .map(|s| s.truncate(MAX_SYMBOL_LEN));
+            .unwrap_or_else(|| "UNKNOWN".to_string());
         symbol.truncate(MAX_SYMBOL_LEN);
         symbol
     }
