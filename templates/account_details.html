@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+    <link rel="stylesheet" type="text/css" href="/static/styles.css">
+    <title>Account Details</title>
+</head>
+<body>
+<div class="container">
+    <header>
+        <h1>Account Details</h1>
+    </header>
+    
+    <p><a href="/">Back to Main Page</a></p>
+    {% match maybe_account %}
+        {% when MaybeAccountDetails::Incorrect with (incorrect_account) %}
+        <p><strong>Incorrect Account:</strong> {{ incorrect_account }}</p>
+        {% when MaybeAccountDetails::Ok with (account_details) %}
+            <p><strong>Address:</strong> {{ account_details.address }} </p>
+            <p><strong>Type:</strong> 
+                {% match account_details.contract %}
+                    {% when ContractDetails::PSP22(_) %}
+                        PSP22 Token Contract
+                    {% when ContractDetails::Other %}
+                        Other Contract
+                    {% when ContractDetails::NotContract %}
+                        Not a Contract
+                {% endmatch %}
+            </p>
+            
+            {% match account_details.contract %}
+                {% when ContractDetails::PSP22 with (token_details) %}
+                    <p><strong>Symbol:</strong> {{ token_details.summary.symbol }}</p>
+                    <p><strong>Name:</strong> {{ token_details.summary.name  }}</p>
+                    <p><strong>Decimals:</strong> {{ token_details.summary.decimals }}</p>
+                    <p><strong>Total Supply:</strong> {{ token_details.summary.total_supply_human }}</p>
+                    <p><strong>Number of holders:</strong> {{ token_details.summary.total_holders }}</p>
+                    {% if token_details.summary.total_holders >0 %}
+                        <h2>Holders
+                            {% if token_details.summary.total_holders > crate::token_db::MAX_HOLDERS_IN_TOKEN_DETAILS.try_into().unwrap() %}
+                                (showing {{ crate::token_db::MAX_HOLDERS_IN_TOKEN_DETAILS }} out of {{ token_details.summary.total_holders }})
+                            {% endif %}
+                        </h2>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>AccountId</th>
+                                    <th>Percentage of Total</th>
+                                    <th>Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for h in token_details.holders %}
+                                <tr>
+                                    <td>{{ loop.index }}</td>
+                                    <td><a href="/account/{{ h.holder_address }}">{{ h.holder_address }}</a></td>
+                                    <td>{{ h.percentage_formatted }}</td>
+                                    <td>{{ h.amount_human }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% endif %}
+                {% else %}
+            {% endmatch %}
+            {% if account_details.holdings.len() > 0 %}
+                <h2>Holdings of {{ account_details.address }}</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Symbol</th>
+                            <th>Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for h in account_details.holdings %}
+                        <tr>
+                            <td>{{ loop.index }}</td>
+                            <td><a href="/account/{{ h.token_address }}">{{ h.token_symbol }}</a></td>
+                            <td>{{ h.amount_human }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% endif %}
+    {% endmatch %}
+</div>
+</body>
+</html>

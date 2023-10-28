@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+    <link rel="stylesheet" type="text/css" href="/static/styles.css">
+    <title>PSP22 Tokens on Aleph Zero</title>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>PSP22 Tokens on Aleph Zero</h1>
+        </header>
+
+        <section class="search-box">
+            <form action="/search" method="GET" class="search-form">
+                <label for="acc" class="search-label">Search Account:</label>
+                <div class="input-group">
+                    <input type="text" id="acc" name="acc" placeholder="Enter an account ID" class="search-input">
+                    <input type="submit" value="Search" class="search-button">
+                </div>
+            </form>
+        </section>  
+        
+        <section class="statistics">
+            <p><strong>Total number of contracts:</strong> {{ total_contracts }}</p>
+            <p><strong>Total number of PSP22 tokens:</strong> {{ total_psp22 }}</p>
+        </section>
+        
+        <section class="token-list">
+            <h2>Most Popular Tokens ({{ crate::token_db::MAX_TOKENS_IN_DB_SUMMARY }} Entries)</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Symbol</th>
+                        <th>Number of Holders</th>
+                        <th>Name</th>
+                        <th>Supply</th>
+                        <th>Decimals</th>
+                        <th>Address</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for token in token_summaries %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td><a href="/account/{{ token.address }}">{{ token.symbol }}</a></td>
+                        <td>{{ token.total_holders }}</td>
+                        <td>{{ token.name }}</td>
+                        <td>{{ token.total_supply_human }}</td>
+                        <td>{{ token.decimals }}</td>
+                        <td><a href="/account/{{ token.address }}">{{ token.address }}</a></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </section>
+    </div>
+</body>
+</html>

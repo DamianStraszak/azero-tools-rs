@@ -1,0 +1,150 @@
+body {
+    background-color: #24273A;
+    color: #EDF2F4;
+    font-family: 'Courier New', monospace;
+    margin: 0;
+    padding: 0;
+    line-height: 1.6;
+}
+
+h1, h2 {
+    text-align: center;
+    color: #EFB366;
+}
+
+p {
+    margin: 10px 0;
+}
+
+.container {
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+header {
+    padding-bottom: 20px;
+    border-bottom: 2px solid #4A4E69;
+    margin-bottom: 20px;
+}
+
+.search-box {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.search-form {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.search-label {
+    font-size: 20px;
+    color: #EDF2F4;
+    margin-right: 10px;
+}
+
+.input-group {
+    display: flex;
+    align-items: center;
+}
+
+.search-input {
+    width: 300px;
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    background-color: #3B3B58;
+    color: #EDF2F4;
+    font-size: 16px;
+    margin-right: 10px;
+}
+
+.search-button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    background-color: #8D99AE;
+    color: #EDF2F4;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+.search-button:hover {
+    background-color: #6B7089;
+}
+
+.statistics {
+    margin-bottom: 20px;
+}
+
+.token-list {
+    margin-bottom: 20px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+th, td {
+    padding: 10px;
+    text-align: left;
+    border-bottom: 1px solid #4A4E69;
+}
+
+th {
+    background-color: #3B3B58;
+}
+
+tr:hover {
+    background-color: #4A4E69;
+}
+
+a {
+    color: #8D99AE;
+    text-decoration: none;
+    transition: color 0.25s ease-in;
+}
+
+a:hover {
+    color: #D90429;
+    text-decoration: underline;
+}
+
+.back-link {
+    display: inline-block;
+    margin-top: 10px;
+    color: #0044cc;
+    text-decoration: none;
+    border-bottom: 1px dashed;
+}
+
+.account-details .error {
+    color: #cc0000;
+}
+
+.account-details .token-details, 
+.account-details .holders, 
+.account-details .holdings {
+    margin-top: 20px;
+}
+
+.holders-table, .holdings-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.holders-table th, .holdings-table th,
+.holders-table td, .holdings-table td {
+    padding: 8px;
+    border: 1px solid #ddd;
+    text-align: left;
+}
+
+.holders-table th, .holdings-table th {
+    background-color: #f2f2f2;
+}
+

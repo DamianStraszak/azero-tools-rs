@@ -1,64 +1,76 @@
 use std::collections::{BTreeMap, HashMap};
 
+use anyhow::Result;
 use subxt::{rpc::types::Bytes, rpc_params, utils::AccountId32};
 
-use crate::{azero, BlockHash, Client, ContractInfo};
+use crate::{azero, BlockHash, ChainContractInfo, Client};
 
 fn contract_info_of_key_to_account_id(key: &Vec<u8>) -> AccountId32 {
     let account_bytes = key[40..].to_vec();
     let array_u8: [u8; 32] = account_bytes.as_slice().try_into().unwrap();
     let account = AccountId32::from(array_u8);
-
     account
 }
 
-pub async fn get_contract_info(api: &Client, address: AccountId32) -> Option<ContractInfo> {
+pub async fn get_contract_info(
+    api: &Client,
+    address: &AccountId32,
+) -> Result<Option<ChainContractInfo>> {
     let storage_address = azero::storage().contracts().contract_info_of(address);
     api.storage()
         .at_latest()
-        .await
-        .unwrap()
+        .await?
         .fetch(&storage_address)
         .await
-        .unwrap()
+        .map_err(|e| anyhow::anyhow!("Get contract info failed {:?}", e))
 }
 
-pub async fn get_contract_infos(api: &Client) -> BTreeMap<AccountId32, ContractInfo> {
+pub async fn get_contract_infos(api: &Client) -> Result<BTreeMap<AccountId32, ChainContractInfo>> {
     let storege_address = azero::storage().contracts().contract_info_of_root();
     let mut res = BTreeMap::new();
     let mut stream = api
         .storage()
         .at_latest()
-        .await
-        .unwrap()
+        .await?
         .iter(storege_address, 200)
-        .await
-        .unwrap();
+        .await?;
     while let Ok(Some((key, value))) = stream.next().await {
         let key = key.0;
         let account = contract_info_of_key_to_account_id(&key);
         res.insert(account, value);
     }
-    res
+    Ok(res)
 }
 
-pub async fn get_contract_storage(
+pub async fn get_contract_state_root_from_trie_id(
     api: &Client,
-    address: AccountId32,
+    trie_id: Vec<u8>,
+    maybe_block_hash: Option<BlockHash>,
+) -> Result<Vec<u8>> {
+    let mut key: Vec<u8> = Vec::from(":child_storage:default:".as_bytes());
+    key.extend_from_slice(&trie_id);
+    api.rpc()
+        .storage(&key, maybe_block_hash)
+        .await?
+        .map(|s| s.0)
+        .ok_or_else(|| anyhow::anyhow!("No root for trie_id {:?}", trie_id))
+}
+
+pub async fn get_contract_storage_from_trie_id(
+    api: &Client,
+    trie_id: Vec<u8>,
     omit_hash: bool,
-    block_hash: Option<BlockHash>,
-) -> HashMap<Vec<u8>, Vec<u8>> {
+    maybe_block_hash: Option<BlockHash>,
+) -> Result<ContractStorage> {
     let mut res = HashMap::new();
-    let contract_info = get_contract_info(&api, address).await.unwrap();
-    let trie_id = contract_info.trie_id.0;
     let child_storage_prefix = "0x".to_owned() + &hex::encode(":child_storage:default:".as_bytes());
-    println!(
-        "trie_id {:?}, child_storage_prefix {}",
-        trie_id, child_storage_prefix
-    );
     let child_trie_key = child_storage_prefix.to_owned() + &hex::encode(trie_id);
-    println!("child_trie_key {}", child_trie_key);
     let batch_size = 96;
+    let block_hash = if let Some(block_hash) = maybe_block_hash {
+        block_hash
+    } else {
+        api.rpc().block_hash(None).await?.unwrap()
+    };
     let mut last_key: Option<String> = None;
     loop {
         let params = rpc_params![
@@ -68,19 +80,13 @@ pub async fn get_contract_storage(
             last_key,
             block_hash.clone()
         ];
-        let keys: Vec<Bytes> = api
-            .rpc()
-            .request("childstate_getKeysPaged", params)
-            .await
-            .unwrap();
-        //println!("keys {:?} len {}", keys, keys.len());
+        let keys: Vec<Bytes> = api.rpc().request("childstate_getKeysPaged", params).await?;
 
         let params = rpc_params![child_trie_key.clone(), keys.clone(), block_hash.clone()];
         let values: Vec<Bytes> = api
             .rpc()
             .request("childstate_getStorageEntries", params)
-            .await
-            .unwrap();
+            .await?;
         last_key = keys
             .last()
             .cloned()
@@ -94,10 +100,22 @@ pub async fn get_contract_storage(
             break;
         }
     }
+    Ok(res)
+}
 
-    println!("res_len {}", res.len());
-
-    res
+pub async fn get_contract_storage(
+    api: &Client,
+    address: &AccountId32,
+    omit_hash: bool,
+    block_hash: Option<BlockHash>,
+) -> Result<ContractStorage> {
+    let contract_info = get_contract_info(&api, address).await?;
+    let contract_info = match contract_info {
+        Some(c) => c,
+        None => return Err(anyhow::anyhow!("Contract not found")),
+    };
+    let trie_id = contract_info.trie_id.0;
+    get_contract_storage_from_trie_id(api, trie_id, omit_hash, block_hash).await
 }
 
 pub type ContractStorage = HashMap<Vec<u8>, Vec<u8>>;
@@ -122,7 +140,6 @@ pub fn storage_to_balances(storage: &ContractStorage) -> BTreeMap<AccountId32, u
             let mut balances = BTreeMap::new();
             for (k, v) in storage_36_16.iter() {
                 if k.starts_with(&magic_prefix) {
-                    //let account_hex = &k[4..];
                     let array_u8: [u8; 32] = k[4..].try_into().unwrap();
                     let account = AccountId32::from(array_u8);
                     let balance = codec::Decode::decode(&mut &v[..]).unwrap();
