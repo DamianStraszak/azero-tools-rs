@@ -7,7 +7,8 @@ body {
     line-height: 1.6;
 }
 
-h1, h2 {
+h1,
+h2 {
     text-align: center;
     color: #EFB366;
 }
@@ -40,7 +41,7 @@ header {
 }
 
 .search-label {
-    font-size: 20px;
+    font-size: 18px;
     color: #EDF2F4;
     margin-right: 10px;
 }
@@ -51,7 +52,7 @@ header {
 }
 
 .search-input {
-    width: 300px;
+    width: 30em;
     padding: 10px;
     border: none;
     border-radius: 5px;
@@ -89,7 +90,8 @@ table {
     margin-top: 20px;
 }
 
-th, td {
+th,
+td {
     padding: 10px;
     text-align: left;
     border-bottom: 1px solid #4A4E69;
@@ -114,37 +116,40 @@ a:hover {
     text-decoration: underline;
 }
 
-.back-link {
-    display: inline-block;
+.network-nav {
+    text-align: center;
     margin-top: 10px;
-    color: #0044cc;
+}
+
+.network-nav ul {
+    padding: 0;
+    list-style: none;
+    display: inline-block;
+    /* Center the list */
+}
+
+.network-nav li {
+    display: inline;
+    margin: 0 10px;
+}
+
+.network-nav a {
+    font-size: 1.5em;
+    /* Make text larger */
     text-decoration: none;
-    border-bottom: 1px dashed;
+    color: #333;
+    /* Set a text color */
+    padding: 10px 20px;
+    border: 1px solid #333;
+    /* Set a border */
+    border-radius: 5px;
+    /* Optional: rounded corners */
 }
 
-.account-details .error {
-    color: #cc0000;
-}
 
-.account-details .token-details, 
-.account-details .holders, 
-.account-details .holdings {
-    margin-top: 20px;
-}
 
-.holders-table, .holdings-table {
-    width: 100%;
-    border-collapse: collapse;
+.network-nav a.active,
+.network-nav a:hover {
+    background-color: #333;
+    color: #fff;
 }
-
-.holders-table th, .holdings-table th,
-.holders-table td, .holdings-table td {
-    padding: 8px;
-    border: 1px solid #ddd;
-    text-align: left;
-}
-
-.holders-table th, .holdings-table th {
-    background-color: #f2f2f2;
-}
-

@@ -1,5 +1,5 @@
 use crate::{
-    contract_calls::{contract_read, ContractReadError, RpcCallError},
+    contracts::{contract_read, ContractReadError, RpcCallError},
     Client,
 };
 use anyhow::Result;

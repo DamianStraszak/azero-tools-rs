@@ -4,15 +4,12 @@ use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use std::{collections::BTreeMap, fs, ops::Deref, sync::Arc};
 use subxt::utils::{AccountId32, H256};
-use syn::token;
 pub type CodeHash = [u8; 32];
 
 mod serialization;
 pub mod tracker;
 
 use serialization::{de_u128_from_string, deserialize_map, ser_u128_as_string, serialize_map};
-
-const TOKEN_DB_FILEPATH_JSON: &str = "token_db.json";
 
 #[derive(Clone)]
 pub struct TokenDB {
@@ -26,8 +23,8 @@ impl TokenDB {
         }
     }
 
-    pub fn from_disk() -> Self {
-        let inner = match TokenDBInner::read_from_disk(TOKEN_DB_FILEPATH_JSON) {
+    pub fn from_disk(filepath: &str) -> Self {
+        let inner = match TokenDBInner::read_from_disk(filepath) {
             Ok(inner) => inner,
             Err(e) => {
                 log::warn!("Failed to read token DB from disk: {}", e);
@@ -39,17 +36,22 @@ impl TokenDB {
         }
     }
 
-    pub fn get_summary(&self) -> DbSummary {
-        self.inner.read().get_summary()
+    pub fn get_summary(&self, network: String) -> DbSummary {
+        self.inner.read().get_summary(network)
     }
 
-    pub fn get_account_details(&self, account_id: String) -> AccountDetailsWrapper {
+    pub fn get_account_details(
+        &self,
+        network: String,
+        account_id: String,
+    ) -> AccountDetailsWrapper {
         let maybe_account_details = match AccountId32::from_str(&account_id) {
             Ok(account) => MaybeAccountDetails::Ok(self.inner.read().get_account_details(&account)),
             Err(_) => MaybeAccountDetails::Incorrect(account_id),
         };
         AccountDetailsWrapper {
             maybe_account: maybe_account_details,
+            network,
         }
     }
 
@@ -108,7 +110,8 @@ impl PSP22Contract {
         let mut symbol = self
             .metadata
             .as_ref()
-            .map(|m| m.symbol.clone().unwrap_or_default())
+            .map(|m| m.symbol.clone())
+            .unwrap_or_default()
             .unwrap_or_else(|| "UNKNOWN".to_string());
         symbol.truncate(MAX_SYMBOL_LEN);
         symbol
@@ -118,7 +121,8 @@ impl PSP22Contract {
         let mut name = self
             .metadata
             .as_ref()
-            .map(|m| m.name.clone().unwrap_or_default())
+            .map(|m| m.name.clone())
+            .unwrap_or_default()
             .unwrap_or_else(|| "UNKNOWN".to_string());
         name.truncate(MAX_NAME_LEN);
         name
@@ -147,7 +151,7 @@ pub enum ContractKind {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ContractInfo {
     address: AccountId32,
-    root_hash: Vec<u8>,
+    root_hash: Option<Vec<u8>>,
     code_hash: H256,
     kind: ContractKind,
 }
@@ -160,6 +164,7 @@ pub struct DbSummary {
     pub total_contracts: u32,
     pub total_psp22: u32,
     pub token_summaries: Vec<TokenSummary>,
+    pub network: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -198,6 +203,7 @@ pub enum ContractDetails {
 #[template(path = "account_details.html")]
 pub struct AccountDetailsWrapper {
     maybe_account: MaybeAccountDetails,
+    network: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -221,7 +227,7 @@ pub struct TokenDetails {
 
 impl From<(&AccountId32, &PSP22Contract)> for TokenDetails {
     fn from(apsp22: (&AccountId32, &PSP22Contract)) -> Self {
-        let (address, psp22) = apsp22;
+        let (_, psp22) = apsp22;
         let summary = TokenSummary::from(apsp22);
         let mut holders = Vec::new();
         for (holder_address, amount) in psp22.holders.iter() {
@@ -281,7 +287,7 @@ impl TokenDBInner {
         fs::write(filepath, json_data)
     }
 
-    pub fn get_summary(&self) -> DbSummary {
+    pub fn get_summary(&self, network: String) -> DbSummary {
         let total_contracts = self.contracts.len() as u32;
         let mut total_psp22 = 0;
         let mut token_summaries = Vec::new();
@@ -301,6 +307,7 @@ impl TokenDBInner {
             total_contracts,
             total_psp22,
             token_summaries,
+            network,
         }
     }
 
@@ -319,18 +326,6 @@ impl TokenDBInner {
             address: account.clone(),
             contract,
             holdings: self.get_holdings(account),
-        }
-    }
-
-    fn get_balance(&self, user: &AccountId32, contract: &AccountId32) -> Option<u128> {
-        match self.contracts.get(contract) {
-            Some(c) => match &c.kind {
-                ContractKind::PSP22(psp22) => {
-                    Some(psp22.holders.get(user).cloned().unwrap_or_default())
-                }
-                _ => None,
-            },
-            None => None,
         }
     }
 

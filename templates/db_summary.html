@@ -11,11 +11,19 @@
 <body>
     <div class="container">
         <header>
+            <nav class="network-nav">
+                <ul>
+                <li><a href="/mainnet" class="{% if network == "mainnet" %}active{% endif %}">Mainnet</a></li>
+                <li><a href="/testnet" class="{% if network == "testnet" %}active{% endif %}">Testnet</a></li>
+                </ul>
+              </nav>
             <h1>PSP22 Tokens on Aleph Zero</h1>
         </header>
 
+        
+
         <section class="search-box">
-            <form action="/search" method="GET" class="search-form">
+            <form action="/{{ network }}/search" method="GET" class="search-form">
                 <label for="acc" class="search-label">Search Account:</label>
                 <div class="input-group">
                     <input type="text" id="acc" name="acc" placeholder="Enter an account ID" class="search-input">
@@ -30,7 +38,7 @@
         </section>
         
         <section class="token-list">
-            <h2>Most Popular Tokens ({{ crate::token_db::MAX_TOKENS_IN_DB_SUMMARY }} Entries)</h2>
+            <h2>Top Tokens by Holder Count ({{ crate::token_db::MAX_TOKENS_IN_DB_SUMMARY }} Entries)</h2>
             <table>
                 <thead>
                     <tr>
@@ -47,12 +55,12 @@
                     {% for token in token_summaries %}
                     <tr>
                         <td>{{ loop.index }}</td>
-                        <td><a href="/account/{{ token.address }}">{{ token.symbol }}</a></td>
+                        <td><a href="/{{ network }}/account/{{ token.address }}">{{ token.symbol }}</a></td>
                         <td>{{ token.total_holders }}</td>
                         <td>{{ token.name }}</td>
                         <td>{{ token.total_supply_human }}</td>
                         <td>{{ token.decimals }}</td>
-                        <td><a href="/account/{{ token.address }}">{{ token.address }}</a></td>
+                        <td><a href="/{{ network }}/account/{{ token.address }}">{{ token.address }}</a></td>
                     </tr>
                     {% endfor %}
                 </tbody>

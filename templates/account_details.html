@@ -8,10 +8,15 @@
 <body>
 <div class="container">
     <header>
+        <nav class="network-nav">
+            <ul>
+                <li><a href="/mainnet" class="{% if network == "mainnet" %}active{% endif %}">Mainnet</a></li>
+                <li><a href="/testnet" class="{% if network == "testnet" %}active{% endif %}">Testnet</a></li>
+            </ul>
+          </nav>
         <h1>Account Details</h1>
     </header>
     
-    <p><a href="/">Back to Main Page</a></p>
     {% match maybe_account %}
         {% when MaybeAccountDetails::Incorrect with (incorrect_account) %}
         <p><strong>Incorrect Account:</strong> {{ incorrect_account }}</p>
@@ -54,7 +59,7 @@
                                 {% for h in token_details.holders %}
                                 <tr>
                                     <td>{{ loop.index }}</td>
-                                    <td><a href="/account/{{ h.holder_address }}">{{ h.holder_address }}</a></td>
+                                    <td><a href="/{{ network }}/account/{{ h.holder_address }}">{{ h.holder_address }}</a></td>
                                     <td>{{ h.percentage_formatted }}</td>
                                     <td>{{ h.amount_human }}</td>
                                 </tr>
@@ -78,7 +83,7 @@
                         {% for h in account_details.holdings %}
                         <tr>
                             <td>{{ loop.index }}</td>
-                            <td><a href="/account/{{ h.token_address }}">{{ h.token_symbol }}</a></td>
+                            <td><a href="/{{ network }}/account/{{ h.token_address }}">{{ h.token_symbol }}</a></td>
                             <td>{{ h.amount_human }}</td>
                         </tr>
                         {% endfor %}
