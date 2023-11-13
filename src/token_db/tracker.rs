@@ -1,10 +1,12 @@
+use std::sync::Arc;
+
 use anyhow::Result;
 
-use rand::{seq::SliceRandom, thread_rng};
-use subxt::utils::AccountId32;
-
 use crate::{
-    contracts::info::backwards_compatible_get_contract_infos,
+    contracts::{
+        events::{backwards_compatible_into_contract_event, GenericContractEvent},
+        info::backwards_compatible_get_contract_infos,
+    },
     psp22::{read_decimals, read_name, read_symbol, read_total_supply},
     storage_calls::{
         get_contract_state_root_from_trie_id, get_contract_storage_from_trie_id,
@@ -13,6 +15,11 @@ use crate::{
     token_db::ContractKind,
     Client,
 };
+use futures::StreamExt;
+use parking_lot::Mutex;
+use priority_queue::PriorityQueue;
+use std::hash::{Hash, Hasher};
+use subxt::utils::AccountId32;
 
 use super::{ContractInfo, PSP22Contract, PSP22ContractMetadata, TokenDB};
 
@@ -119,6 +126,119 @@ async fn get_current_contracts(api: &Client) -> Result<Vec<AccountId32>> {
 
 const FREQUENCY_SAVE_BACKUP_SECS: u64 = 60;
 
+#[derive(Clone, Eq, PartialEq, Debug)]
+pub(crate) struct AccountId32HashWrapper(pub(crate) AccountId32);
+
+impl Hash for AccountId32HashWrapper {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.0 .0.hash(state);
+    }
+}
+
+#[derive(Clone)]
+struct AccountPQ {
+    queue: Arc<Mutex<PriorityQueue<AccountId32HashWrapper, u32>>>,
+}
+
+impl AccountPQ {
+    pub fn new() -> Self {
+        Self {
+            queue: Arc::new(Mutex::new(PriorityQueue::new())),
+        }
+    }
+
+    pub fn insert_or_update(&self, address: AccountId32, priority: u32) {
+        let mut queue = self.queue.lock();
+        queue.push_increase(AccountId32HashWrapper(address.clone()), priority);
+    }
+
+    pub fn pop(&self) -> Option<(AccountId32, u32)> {
+        let mut queue = self.queue.lock();
+        queue.pop().map(|(k, p)| (k.0, p))
+    }
+
+    pub fn len(&self) -> usize {
+        let queue = self.queue.lock();
+        queue.len()
+    }
+}
+
+async fn signal_contract_events(api: Client, queue: AccountPQ) -> ! {
+    loop {
+        let mut block_stream = match api.blocks().subscribe_finalized().await {
+            Ok(stream) => stream,
+            Err(e) => {
+                log::error!("Error subscribing to blocks: {}", e);
+                tokio::time::sleep(std::time::Duration::from_secs(10)).await;
+                continue;
+            }
+        };
+        loop {
+            match block_stream.next().await {
+                Some(block) => {
+                    let block = match block {
+                        Ok(b) => b,
+                        Err(e) => {
+                            log::error!("Error getting block from stream {}", e);
+                            tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+                            continue;
+                        }
+                    };
+                    let block_number = block.header().number;
+                    let block_hash = block.hash();
+                    log::debug!("Stream: block {} {}", block_number, block_hash);
+                    let events = match block.events().await {
+                        Ok(events) => events,
+                        Err(e) => {
+                            log::error!("Error getting events from block: {}", e);
+                            tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+                            continue;
+                        }
+                    };
+                    for event in events.iter() {
+                        match event {
+                            Ok(event) => {
+                                if let Some(e) = backwards_compatible_into_contract_event(event) {
+                                    use GenericContractEvent::*;
+                                    match e {
+                                        Instantiated { contract, .. } => {
+                                            log::info!(
+                                                "Adding contract {} to queue because Instantiated",
+                                                contract
+                                            );
+                                            queue.insert_or_update(contract, 1);
+                                        }
+                                        Called { contract, .. } => {
+                                            log::info!(
+                                                "Adding contract {} to queue because Called",
+                                                contract
+                                            );
+                                            queue.insert_or_update(contract, 1);
+                                        }
+                                        DelegateCalled { contract, .. } => {
+                                            log::info!("Adding contract {} to queue because DelegateCalled", contract);
+                                            queue.insert_or_update(contract, 1);
+                                        }
+                                        _ => {}
+                                    }
+                                }
+                            }
+                            Err(e) => {
+                                log::error!("Error decoding event: {}", e);
+                            }
+                        }
+                    }
+                }
+                None => {
+                    log::error!("Block stream ended");
+                    tokio::time::sleep(std::time::Duration::from_secs(10)).await;
+                    break;
+                }
+            }
+        }
+    }
+}
+
 impl TokenDBTracker {
     pub async fn new(db: TokenDB, backup_path: &str, endpoint: &str) -> Result<Self> {
         let api = Client::from_url(endpoint).await?;
@@ -130,13 +250,16 @@ impl TokenDBTracker {
     }
 
     pub async fn run(&self) -> ! {
-        let mut contracts_to_update: Vec<AccountId32> = Vec::new();
+        let queue = AccountPQ::new();
         let mut last_db_update = std::time::Instant::now();
+        let queue_cloned = queue.clone();
+        let client_cloned = self.api.clone();
+        tokio::spawn(async move { signal_contract_events(client_cloned, queue_cloned).await });
         loop {
-            tokio::time::sleep(std::time::Duration::from_millis(10)).await;
-            if let Some(address) = contracts_to_update.pop() {
-                if contracts_to_update.len() % 100 == 0 {
-                    log::info!("{} contracts left in queue", contracts_to_update.len());
+            if let Some((address, prio)) = queue.pop() {
+                let queue_len = queue.len();
+                if queue_len % 100 == 0 {
+                    log::info!("{} contracts left in queue", queue_len);
                 }
                 let old_info = self.db.inner.read().contracts.get(&address).cloned();
                 match get_contract(&self.api, &address, old_info).await {
@@ -148,13 +271,16 @@ impl TokenDBTracker {
                         log::debug!("Error updating contract {}: {}", address, e);
                     }
                 }
+                if prio == 0 {
+                    tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+                }
             } else {
                 log::info!("Starting a new cycle over all contracts");
                 match get_current_contracts(&self.api).await {
                     Ok(contracts) => {
-                        contracts_to_update = contracts;
-                        let mut rng = thread_rng();
-                        contracts_to_update.shuffle(&mut rng);
+                        for c in contracts {
+                            queue.insert_or_update(c, 0);
+                        }
                     }
                     Err(e) => {
                         log::error!("Error {} getting contracts", e);

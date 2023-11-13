@@ -7,6 +7,7 @@ use subxt::rpc_params;
 use subxt::utils::AccountId32;
 
 use crate::{alice_acc, Client};
+pub mod events;
 pub mod info;
 type Weight = crate::azero_12_0::runtime_types::sp_weights::weight_v2::Weight;
 
