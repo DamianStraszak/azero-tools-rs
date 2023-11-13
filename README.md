@@ -1,12 +1,16 @@
 # azero-tools-rs
 
-Disclaimer: this code was written as part of a fun weekend project and it is not production ready.
+## Disclaimer
 
-This project is a simple rust webserver that allows to display basic information about PSP22 tokens on Aleph Zero testnet and mainnet. It uses the following great libraries:
-- [subxt](https://github.com/paritytech/subxt) for interacting with Aleph Zero (a Substrate-based chain)
-- [ink-wrapper](https://github.com/Cardinal-Cryptography/ink-wrapper) for generating type-safe wrappers around a PSP22 contract
-- [askama](https://github.com/djc/askama) for HTML templates using rust
-- [axum](https://github.com/tokio-rs/axum) a HTTP server
+Please note that this code was developed as part of a fun weekend project. It is not intended for production use and should be treated as experimental. As such, it may lack the robustness and features needed for a production environment.
+
+## Project
+
+This project implements a rust web-server that allows to display basic information about PSP22 tokens on Aleph Zero testnet and mainnet. It makes use of the following great libraries:
+- [subxt](https://github.com/paritytech/subxt) for interacting with Aleph Zero (a Substrate-based chain),
+- [ink-wrapper](https://github.com/Cardinal-Cryptography/ink-wrapper) for generating type-safe wrappers around a PSP22 contract,
+- [askama](https://github.com/djc/askama) for HTML templates using rust,
+- [axum](https://github.com/tokio-rs/axum) for HTTP server.
 
 
 The application could be stateless, but then it would take too much time to scrape the information from chain on restart, hence the server makes backups in json files from time to time.
