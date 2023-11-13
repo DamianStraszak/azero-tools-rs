@@ -26,6 +26,7 @@ use super::{ContractInfo, PSP22Contract, PSP22ContractMetadata, TokenDB};
 
 pub struct TokenDBTracker {
     db: TokenDB,
+    network: String,
     endpoint: String,
     backup_path: String,
 }
@@ -165,13 +166,13 @@ impl AccountPQ {
     }
 }
 
-async fn signal_contract_events(endpoint: &str, queue: AccountPQ) -> ! {
+async fn signal_contract_events(network: &str, endpoint: &str, queue: AccountPQ) -> ! {
     loop {
         let client = initialize_client(endpoint).await;
         let mut block_stream = match client.blocks().subscribe_finalized().await {
             Ok(stream) => stream,
             Err(e) => {
-                log::error!("Error subscribing to blocks: {}", e);
+                log::error!("{}: Error subscribing to blocks: {}", network, e);
                 tokio::time::sleep(std::time::Duration::from_secs(2)).await;
                 continue;
             }
@@ -182,18 +183,18 @@ async fn signal_contract_events(endpoint: &str, queue: AccountPQ) -> ! {
                     let block = match block {
                         Ok(b) => b,
                         Err(e) => {
-                            log::error!("Error getting block from stream {}", e);
+                            log::error!("{}: Error getting block from stream {}", network, e);
                             tokio::time::sleep(std::time::Duration::from_secs(1)).await;
                             continue;
                         }
                     };
                     let block_number = block.header().number;
                     let block_hash = block.hash();
-                    log::debug!("Stream: block {} {}", block_number, block_hash);
+                    log::debug!("{}: Stream: block {} {}", network, block_number, block_hash);
                     let events = match block.events().await {
                         Ok(events) => events,
                         Err(e) => {
-                            log::error!("Error getting events from block: {}", e);
+                            log::error!("{}: Error getting events from block: {}", network, e);
                             tokio::time::sleep(std::time::Duration::from_secs(1)).await;
                             continue;
                         }
@@ -206,20 +207,22 @@ async fn signal_contract_events(endpoint: &str, queue: AccountPQ) -> ! {
                                     match e {
                                         Instantiated { contract, .. } => {
                                             log::info!(
-                                                "Adding contract {} to queue because Instantiated",
+                                                "{}: Adding contract {} to queue because Instantiated",
+                                                network,
                                                 contract
                                             );
                                             queue.insert_or_update(contract, 1);
                                         }
                                         Called { contract, .. } => {
                                             log::info!(
-                                                "Adding contract {} to queue because Called",
+                                                "{}: Adding contract {} to queue because Called",
+                                                network,
                                                 contract
                                             );
                                             queue.insert_or_update(contract, 1);
                                         }
                                         DelegateCalled { contract, .. } => {
-                                            log::info!("Adding contract {} to queue because DelegateCalled", contract);
+                                            log::info!("{}: Adding contract {} to queue because DelegateCalled", network, contract);
                                             queue.insert_or_update(contract, 1);
                                         }
                                         _ => {}
@@ -227,13 +230,13 @@ async fn signal_contract_events(endpoint: &str, queue: AccountPQ) -> ! {
                                 }
                             }
                             Err(e) => {
-                                log::error!("Error decoding event: {}", e);
+                                log::error!("{}: Error decoding event: {}", network, e);
                             }
                         }
                     }
                 }
                 None => {
-                    log::error!("Block stream ended");
+                    log::error!("{}: Block stream ended", network);
                     tokio::time::sleep(std::time::Duration::from_secs(10)).await;
                     break;
                 }
@@ -243,9 +246,15 @@ async fn signal_contract_events(endpoint: &str, queue: AccountPQ) -> ! {
 }
 
 impl TokenDBTracker {
-    pub async fn new(db: TokenDB, backup_path: &str, endpoint: &str) -> Result<Self> {
+    pub async fn new(
+        db: TokenDB,
+        network: &str,
+        backup_path: &str,
+        endpoint: &str,
+    ) -> Result<Self> {
         Ok(Self {
             db,
+            network: network.to_string(),
             endpoint: endpoint.to_string(),
             backup_path: backup_path.to_string(),
         })
@@ -256,20 +265,24 @@ impl TokenDBTracker {
         let mut last_db_update = std::time::Instant::now();
         let queue_cloned = queue.clone();
         let url = self.endpoint.clone();
-        tokio::spawn(async move { signal_contract_events(&url, queue_cloned).await });
+        let name = self.network.clone();
+        tokio::spawn(async move { signal_contract_events(&name, &url, queue_cloned).await });
         let mut client = initialize_client(&self.endpoint).await;
         let mut fail_tracker = 0;
         let mut iter_no: u64 = 0;
         loop {
             if fail_tracker >= 10 {
                 fail_tracker = 0;
-                log::warn!("Initializing client again after 10 failures");
+                log::warn!(
+                    "{}: Initializing client again after 10 failures",
+                    self.network
+                );
                 client = initialize_client(&self.endpoint).await;
             }
             if let Some((address, prio)) = queue.pop() {
                 iter_no += 1;
                 if iter_no % 100 == 0 {
-                    log::info!("{} contracts left in queue", queue.len());
+                    log::info!("{}: {} contracts left in queue", self.network, queue.len());
                 }
                 let old_info = self.db.inner.read().contracts.get(&address).cloned();
                 match get_contract(&client, &address, old_info).await {
@@ -278,7 +291,12 @@ impl TokenDBTracker {
                         db.contracts.insert(address, contract);
                     }
                     Err(e) => {
-                        log::debug!("Error updating contract {}: {}", address, e);
+                        log::debug!(
+                            "{}: Error updating contract {}: {}",
+                            self.network,
+                            address,
+                            e
+                        );
                         fail_tracker += 1;
                     }
                 }
@@ -286,7 +304,7 @@ impl TokenDBTracker {
                     tokio::time::sleep(std::time::Duration::from_millis(BREAK_TIME_MILLIS)).await;
                 }
             } else {
-                log::info!("Starting a new cycle over all contracts");
+                log::info!("{}: Starting a new cycle over all contracts", self.network);
                 match get_current_contracts(&client).await {
                     Ok(contracts) => {
                         for c in contracts {
@@ -294,7 +312,7 @@ impl TokenDBTracker {
                         }
                     }
                     Err(e) => {
-                        log::error!("Error {} getting contracts", e);
+                        log::error!("{}: Error {} getting contracts", self.network, e);
                         fail_tracker += 1;
                     }
                 }
@@ -304,7 +322,7 @@ impl TokenDBTracker {
             {
                 match self.db.read().write_json_to_disk(&self.backup_path) {
                     Ok(_) => {}
-                    Err(e) => log::error!("Error saving backup: {}", e),
+                    Err(e) => log::error!("{}: Error saving backup: {}", self.network, e),
                 }
                 last_db_update = now;
             }

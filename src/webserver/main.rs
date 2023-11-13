@@ -44,7 +44,7 @@ async fn main() {
 
 async fn create_app(network: &str, backup_path: &str, ws_url: &str) -> Router {
     let token_db = TokenDB::from_disk(backup_path);
-    let tracker = TokenDBTracker::new(token_db.clone(), backup_path, ws_url)
+    let tracker = TokenDBTracker::new(token_db.clone(), network, backup_path, ws_url)
         .await
         .unwrap();
     let state = NetworkTokens {
