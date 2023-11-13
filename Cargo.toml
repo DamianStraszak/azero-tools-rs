@@ -2,7 +2,6 @@
 name = "azero-tools-rs"
 version = "0.1.0"
 edition = "2021"
-default-run = "azero-tools-rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -56,9 +55,6 @@ ink-wrapper-types = "0.5.0"
 ink_primitives = "4.2.1"
 
 
-# This one is optional, but you most likely need it as well if you're using the default `aleph_client` implementation
-# for actually making calls. Otherwise, you will need to implement `ink_wrapper_types::Connection` and
-# `ink_wrapper_types::SignedConnection` yourself.
 pallet-contracts-primitives = "9.0.0"
 sp-runtime = "9.0.0"
 anyhow = "1.0.75"

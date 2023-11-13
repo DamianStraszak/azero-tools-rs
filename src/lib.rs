@@ -1,9 +1,6 @@
-use futures::StreamExt;
 use std::str::FromStr;
 use subxt::utils::AccountId32;
 use subxt::{OnlineClient, PolkadotConfig};
-
-use crate::contracts::events::backwards_compatible_into_contract_event;
 
 #[subxt::subxt(runtime_metadata_path = "./metadata/azero-mainnet.scale")]
 pub mod azero_11_4 {}
@@ -29,4 +26,16 @@ pub const ALICE: &str = "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY";
 
 pub fn alice_acc() -> AccountId32 {
     AccountId32::from_str(ALICE).unwrap()
+}
+
+pub async fn initialize_client(url: &str) -> Client {
+    loop {
+        match Client::from_url(url).await {
+            Ok(client) => break client,
+            Err(e) => {
+                println!("Error {} initializing client at {}", e, url);
+                tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+            }
+        }
+    }
 }

@@ -30,19 +30,19 @@ pub struct ContractCallArgs {
 #[derive(Debug, thiserror::Error)]
 pub enum ContractReadError {
     #[error("Dispatch error {:?}", "{0}")]
-    DispatchError(DispatchError),
+    Dispatch(DispatchError),
     #[error("Rpc decode error {0}")]
-    ResultDecodeError(#[from] codec::Error),
+    ResultDecode(#[from] codec::Error),
     #[error("InkLang error {0}")]
-    InkLangError(#[from] InkLangError),
+    InkLang(#[from] InkLangError),
 }
 
 #[derive(Debug, thiserror::Error)]
 pub enum RpcCallError {
     #[error("Rpc request failed {0}")]
-    RpcError(#[from] subxt::Error),
+    Rpc(#[from] subxt::Error),
     #[error("Rpc decode error {0}")]
-    RpcDecodeError(#[from] codec::Error),
+    RpcDecode(#[from] codec::Error),
 }
 
 async fn call_and_get(
@@ -83,10 +83,10 @@ pub async fn contract_read_general<T: codec::Decode + Send>(
     let dest = AccountId32::try_from(dest_bytes).unwrap();
     let rpc_result = dry_run(api, origin, dest, value, call.data).await?.result;
     let result = match rpc_result {
-        Err(e) => Err(ContractReadError::DispatchError(e)),
+        Err(e) => Err(ContractReadError::Dispatch(e)),
         Ok(exec_return) => match codec::Decode::decode(&mut exec_return.data.as_slice()) {
             Ok(v) => Ok(v),
-            Err(e) => Err(ContractReadError::ResultDecodeError(e)),
+            Err(e) => Err(ContractReadError::ResultDecode(e)),
         },
     };
     Ok(result)

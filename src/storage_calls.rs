@@ -41,11 +41,11 @@ pub async fn get_contract_storage_from_trie_id(
             "0x",
             batch_size,
             last_key,
-            block_hash.clone()
+            block_hash
         ];
         let keys: Vec<Bytes> = api.rpc().request("childstate_getKeysPaged", params).await?;
 
-        let params = rpc_params![child_trie_key.clone(), keys.clone(), block_hash.clone()];
+        let params = rpc_params![child_trie_key.clone(), keys.clone(), block_hash];
         let values: Vec<Bytes> = api
             .rpc()
             .request("childstate_getStorageEntries", params)
@@ -55,7 +55,7 @@ pub async fn get_contract_storage_from_trie_id(
             .cloned()
             .map(|k| "0x".to_owned() + &hex::encode(k.0));
         let len = keys.len();
-        for (k, v) in keys.into_iter().zip(values.into_iter()) {
+        for (k, v) in keys.into_iter().zip(values) {
             let key = if omit_hash { k.0[16..].to_vec() } else { k.0 };
             res.insert(key, v.0);
         }
@@ -65,21 +65,6 @@ pub async fn get_contract_storage_from_trie_id(
     }
     Ok(res)
 }
-
-// pub async fn get_contract_storage(
-//     api: &Client,
-//     address: &AccountId32,
-//     omit_hash: bool,
-//     block_hash: Option<BlockHash>,
-// ) -> Result<ContractStorage> {
-//     let contract_info = get_contract_info(&api, address).await?;
-//     let contract_info = match contract_info {
-//         Some(c) => c,
-//         None => return Err(anyhow::anyhow!("Contract not found")),
-//     };
-//     let trie_id = contract_info.trie_id.0;
-//     get_contract_storage_from_trie_id(api, trie_id, omit_hash, block_hash).await
-// }
 
 pub type ContractStorage = HashMap<Vec<u8>, Vec<u8>>;
 

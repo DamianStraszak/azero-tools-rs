@@ -16,6 +16,12 @@ pub struct TokenDB {
     inner: Arc<RwLock<TokenDBInner>>,
 }
 
+impl Default for TokenDB {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl TokenDB {
     pub fn new() -> Self {
         Self {
@@ -73,21 +79,11 @@ pub struct TokenDBInner {
     pub contracts: BTreeMap<AccountId32, ContractInfo>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 struct PSP22ContractMetadata {
     name: Option<String>,
     symbol: Option<String>,
     decimals: u8,
-}
-
-impl Default for PSP22ContractMetadata {
-    fn default() -> Self {
-        Self {
-            name: None,
-            symbol: None,
-            decimals: 0,
-        }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -262,6 +258,12 @@ impl From<(&AccountId32, &PSP22Contract)> for TokenSummary {
     }
 }
 
+impl Default for TokenDBInner {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl TokenDBInner {
     pub fn new() -> Self {
         Self {
@@ -292,13 +294,10 @@ impl TokenDBInner {
         let mut total_psp22 = 0;
         let mut token_summaries = Vec::new();
         for (_, info) in self.contracts.iter() {
-            match &info.kind {
-                ContractKind::PSP22(psp22c) => {
-                    total_psp22 += 1;
-                    let token_summary = TokenSummary::from((&info.address, psp22c));
-                    token_summaries.push(token_summary);
-                }
-                _ => (),
+            if let ContractKind::PSP22(psp22c) = &info.kind {
+                total_psp22 += 1;
+                let token_summary = TokenSummary::from((&info.address, psp22c));
+                token_summaries.push(token_summary);
             }
         }
         token_summaries.sort_by(|a, b| a.total_holders.cmp(&b.total_holders).reverse());
@@ -332,26 +331,23 @@ impl TokenDBInner {
     fn get_holdings(&self, user: &AccountId32) -> Vec<TokenHolding> {
         let mut holdings = Vec::new();
         for (contract, info) in self.contracts.iter() {
-            match &info.kind {
-                ContractKind::PSP22(psp22) => {
-                    if let Some(balance) = psp22.holders.get(user) {
-                        if balance > &0 {
-                            let token_symbol = psp22
-                                .metadata
-                                .as_ref()
-                                .cloned()
-                                .unwrap_or_default()
-                                .symbol
-                                .unwrap_or_else(|| "UNKNOWN".to_string());
-                            holdings.push(TokenHolding {
-                                token_address: contract.clone(),
-                                token_symbol,
-                                amount_human: psp22.human_format_amount(*balance),
-                            });
-                        }
+            if let ContractKind::PSP22(psp22) = &info.kind {
+                if let Some(balance) = psp22.holders.get(user) {
+                    if balance > &0 {
+                        let token_symbol = psp22
+                            .metadata
+                            .as_ref()
+                            .cloned()
+                            .unwrap_or_default()
+                            .symbol
+                            .unwrap_or_else(|| "UNKNOWN".to_string());
+                        holdings.push(TokenHolding {
+                            token_address: contract.clone(),
+                            token_symbol,
+                            amount_human: psp22.human_format_amount(*balance),
+                        });
                     }
                 }
-                _ => (),
             }
         }
         holdings

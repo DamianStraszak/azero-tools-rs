@@ -6,11 +6,10 @@ use subxt::utils::{AccountId32, H256};
 
 use crate::Client;
 
-fn contract_info_of_key_to_account_id(key: &Vec<u8>) -> AccountId32 {
+fn contract_info_of_key_to_account_id(key: &[u8]) -> AccountId32 {
     let account_bytes = key[40..].to_vec();
     let array_u8: [u8; 32] = account_bytes.as_slice().try_into().unwrap();
-    let account = AccountId32::from(array_u8);
-    account
+    AccountId32::from(array_u8)
 }
 
 mod v_12_0 {
@@ -169,31 +168,6 @@ pub async fn backwards_compatible_get_contract_info(
         err_12_0
     ))
 }
-
-// pub async fn get_contract_infos(api: &Client) -> Result<BTreeMap<AccountId32, ChainContractInfo>> {
-//     let storege_address = azero::storage().contracts().contract_info_of_root();
-//     let mut res = BTreeMap::new();
-//     let mut stream = api
-//         .storage()
-//         .at_latest()
-//         .await?
-//         .iter(storege_address, 200)
-//         .await?;
-//     while let Ok(Some((key, value))) = stream.next().await {
-//         let key = key.0;
-//         let account = contract_info_of_key_to_account_id(&key);
-//         res.insert(account, value);
-//     }
-//     Ok(res)
-// }
-
-// pub trait ContractInfoGetter {
-//     async fn get_contract_info(api: &Client, address: &AccountId32) -> Result<GenericContractInfo> {
-//     }
-
-//     async fn get_contract_infos(api: &Client) -> Result<BTreeMap<AccountId32, GenericContractInfo>> {
-//     }
-// }
 
 pub struct GenericContractInfo {
     pub trie_id: Vec<u8>,

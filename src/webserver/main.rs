@@ -73,7 +73,7 @@ async fn account_handler(
     axum::extract::Extension(state): axum::extract::Extension<NetworkTokens>,
 ) -> impl axum::response::IntoResponse {
     let network = state.network.clone();
-    let account_details = state.db.get_account_details(network, account_id); // Implement this function to fetch the account details
+    let account_details = state.db.get_account_details(network, account_id);
     axum::response::Html(account_details.render().unwrap())
 }
 

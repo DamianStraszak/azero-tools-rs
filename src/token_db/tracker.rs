@@ -7,6 +7,7 @@ use crate::{
         events::{backwards_compatible_into_contract_event, GenericContractEvent},
         info::backwards_compatible_get_contract_infos,
     },
+    initialize_client,
     psp22::{read_decimals, read_name, read_symbol, read_total_supply},
     storage_calls::{
         get_contract_state_root_from_trie_id, get_contract_storage_from_trie_id,
@@ -25,7 +26,7 @@ use super::{ContractInfo, PSP22Contract, PSP22ContractMetadata, TokenDB};
 
 pub struct TokenDBTracker {
     db: TokenDB,
-    api: Client,
+    endpoint: String,
     backup_path: String,
 }
 
@@ -65,7 +66,7 @@ async fn get_contract(
             Some(info) => info,
             None => return Err(anyhow::anyhow!("No contract info for {}", address)),
         };
-    let root_hash = get_contract_state_root_from_trie_id(&api, info.trie_id.clone(), None).await?;
+    let root_hash = get_contract_state_root_from_trie_id(api, info.trie_id.clone(), None).await?;
     log::debug!("Getting total_supply for contract {}", address);
     let total_supply = match read_total_supply(api, address).await? {
         Ok(total_supply) => total_supply,
@@ -102,7 +103,7 @@ async fn get_contract(
     let metadata = get_psp22_metadata(api, address).await?;
     let trie_id = info.trie_id;
     log::debug!("Getting storage for contract {}", address);
-    let storage = get_contract_storage_from_trie_id(&api, trie_id, true, None).await?;
+    let storage = get_contract_storage_from_trie_id(api, trie_id, true, None).await?;
     log::debug!("Computing holders for contract {}", address);
     let holders = storage_to_balances(&storage);
 
@@ -121,10 +122,11 @@ async fn get_contract(
 
 async fn get_current_contracts(api: &Client) -> Result<Vec<AccountId32>> {
     let contracts = backwards_compatible_get_contract_infos(api).await?;
-    Ok(contracts.into_iter().map(|(k, _)| k).collect())
+    Ok(contracts.into_keys().collect())
 }
 
-const FREQUENCY_SAVE_BACKUP_SECS: u64 = 60;
+const FREQUENCY_SAVE_BACKUP_SECS: u64 = 600;
+const BREAK_TIME_MILLIS: u64 = 30;
 
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub(crate) struct AccountId32HashWrapper(pub(crate) AccountId32);
@@ -163,13 +165,14 @@ impl AccountPQ {
     }
 }
 
-async fn signal_contract_events(api: Client, queue: AccountPQ) -> ! {
+async fn signal_contract_events(endpoint: &str, queue: AccountPQ) -> ! {
     loop {
-        let mut block_stream = match api.blocks().subscribe_finalized().await {
+        let client = initialize_client(endpoint).await;
+        let mut block_stream = match client.blocks().subscribe_finalized().await {
             Ok(stream) => stream,
             Err(e) => {
                 log::error!("Error subscribing to blocks: {}", e);
-                tokio::time::sleep(std::time::Duration::from_secs(10)).await;
+                tokio::time::sleep(std::time::Duration::from_secs(2)).await;
                 continue;
             }
         };
@@ -241,10 +244,9 @@ async fn signal_contract_events(api: Client, queue: AccountPQ) -> ! {
 
 impl TokenDBTracker {
     pub async fn new(db: TokenDB, backup_path: &str, endpoint: &str) -> Result<Self> {
-        let api = Client::from_url(endpoint).await?;
         Ok(Self {
             db,
-            api,
+            endpoint: endpoint.to_string(),
             backup_path: backup_path.to_string(),
         })
     }
@@ -253,30 +255,39 @@ impl TokenDBTracker {
         let queue = AccountPQ::new();
         let mut last_db_update = std::time::Instant::now();
         let queue_cloned = queue.clone();
-        let client_cloned = self.api.clone();
-        tokio::spawn(async move { signal_contract_events(client_cloned, queue_cloned).await });
+        let url = self.endpoint.clone();
+        tokio::spawn(async move { signal_contract_events(&url, queue_cloned).await });
+        let mut client = initialize_client(&self.endpoint).await;
+        let mut fail_tracker = 0;
+        let mut iter_no: u64 = 0;
         loop {
+            if fail_tracker >= 10 {
+                fail_tracker = 0;
+                log::warn!("Initializing client again after 10 failures");
+                client = initialize_client(&self.endpoint).await;
+            }
             if let Some((address, prio)) = queue.pop() {
-                let queue_len = queue.len();
-                if queue_len % 100 == 0 {
-                    log::info!("{} contracts left in queue", queue_len);
+                iter_no += 1;
+                if iter_no % 100 == 0 {
+                    log::info!("{} contracts left in queue", queue.len());
                 }
                 let old_info = self.db.inner.read().contracts.get(&address).cloned();
-                match get_contract(&self.api, &address, old_info).await {
+                match get_contract(&client, &address, old_info).await {
                     Ok(contract) => {
                         let mut db = self.db.inner.write();
                         db.contracts.insert(address, contract);
                     }
                     Err(e) => {
                         log::debug!("Error updating contract {}: {}", address, e);
+                        fail_tracker += 1;
                     }
                 }
                 if prio == 0 {
-                    tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+                    tokio::time::sleep(std::time::Duration::from_millis(BREAK_TIME_MILLIS)).await;
                 }
             } else {
                 log::info!("Starting a new cycle over all contracts");
-                match get_current_contracts(&self.api).await {
+                match get_current_contracts(&client).await {
                     Ok(contracts) => {
                         for c in contracts {
                             queue.insert_or_update(c, 0);
@@ -284,6 +295,7 @@ impl TokenDBTracker {
                     }
                     Err(e) => {
                         log::error!("Error {} getting contracts", e);
+                        fail_tracker += 1;
                     }
                 }
             }
