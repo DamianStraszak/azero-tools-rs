@@ -15,6 +15,8 @@ This project implements a rust web-server that allows to display basic informati
 
 The application could be stateless, but then it would take too much time to scrape the information from chain on restart, hence the server makes backups in json files from time to time.
 
+It is currently deployed on https://azero-tools.com.
+
 
 ## Running instructions
 
