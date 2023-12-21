@@ -69,7 +69,7 @@ pub async fn get_contract_storage_from_trie_id(
 pub type ContractStorage = HashMap<Vec<u8>, Vec<u8>>;
 
 pub fn storage_to_balances(storage: &ContractStorage) -> BTreeMap<AccountId32, u128> {
-    let magic_prefixes: Vec<Vec<u8>> = ["3b8d451d", "e4aae541", "264866c2"]
+    let magic_prefixes: Vec<Vec<u8>> = ["3b8d451d", "e4aae541", "264866c2", "d446c745"]
         .iter()
         .map(|s| hex::decode(s).unwrap())
         .collect();

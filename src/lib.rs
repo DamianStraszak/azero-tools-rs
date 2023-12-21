@@ -11,9 +11,9 @@ pub mod azero_12_0 {}
 pub type Client = OnlineClient<PolkadotConfig>;
 pub type BlockHash = <PolkadotConfig as subxt::Config>::Hash;
 
-mod contracts;
+pub mod contracts;
 mod psp22;
-mod storage_calls;
+pub mod storage_calls;
 pub mod token_db;
 
 pub const MAINNET_TOKEN_DB_FILEPATH_JSON: &str = "mainnet_token_db.json";
