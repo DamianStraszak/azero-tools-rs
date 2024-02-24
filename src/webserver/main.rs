@@ -9,8 +9,6 @@ use azero_tools_rs::{
 };
 use serde::Deserialize;
 use std::env;
-use std::net::SocketAddr;
-use std::str::FromStr;
 use tower_http::services::ServeDir;
 
 #[derive(Clone)]
@@ -34,10 +32,10 @@ async fn main() {
         .nest_service("/static", static_files_service)
         .route("/", get(Redirect::to("/mainnet")));
 
-    let addr = SocketAddr::from_str("127.0.0.1:3000").unwrap();
-    println!("Server running at http://{}", addr);
-    axum::Server::bind(&addr)
-        .serve(app.into_make_service())
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:3000").await.unwrap();
+    println!("Server running at {:?}", listener);
+    axum::
+        serve(listener, app.into_make_service())
         .await
         .unwrap();
 }
