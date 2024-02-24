@@ -27,7 +27,7 @@ getrandom = { version = "0.2", default-features = false }
 hex = "0.4.3"
 heck = "0.4.1"
 impl-serde = { version = "0.4.0" }
-jsonrpsee = { version = "0.20" }
+jsonrpsee = { version = "0.22" }
 pretty_assertions = "1.4.0"
 primitive-types = { version = "0.12.1", default-features = false, features = ["codec", "scale-info", "serde"] }
 proc-macro-error = "1.0.4"
@@ -51,7 +51,7 @@ wabt = "0.10.0"
 wasm-bindgen-test = "0.3.24"
 which = "4.4.2"
 
-ink-wrapper-types = "0.5.0"
+ink-wrapper-types = {version = "0.8.0", default-features = false }
 ink_primitives = "4.2.1"
 
 
