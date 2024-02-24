@@ -2,8 +2,8 @@ use std::str::FromStr;
 use subxt::utils::AccountId32;
 use subxt::{OnlineClient, PolkadotConfig};
 
-#[subxt::subxt(runtime_metadata_path = "./metadata/azero-mainnet.scale")]
-pub mod azero_11_4 {}
+#[subxt::subxt(runtime_metadata_path = "./metadata/azero-13.0.scale")]
+pub mod azero_13_0 {}
 
 #[subxt::subxt(runtime_metadata_path = "./metadata/azero-12.0.scale")]
 pub mod azero_12_0 {}

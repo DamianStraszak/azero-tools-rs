@@ -50,10 +50,13 @@ impl From<AccountId32> for Origin {
     }
 }
 
-mod v_11_4 {
+mod v_13_0 {
     use super::GenericContractEvent;
-    use crate::azero_11_4::runtime_types::pallet_contracts::pallet::Event as ContractsEvent;
-    use crate::azero_11_4::Event;
+    use super::Origin;
+    use crate::azero_13_0::runtime_types::pallet_contracts::{
+        pallet::Event as ContractsEvent, Origin as CallOrigin,
+    };
+    use crate::azero_13_0::Event;
     use subxt::events::EventDetails;
     use subxt::PolkadotConfig;
 
@@ -74,7 +77,7 @@ mod v_11_4 {
                         contract,
                         beneficiary,
                     }),
-                    ContractsEvent::CodeStored { code_hash } => {
+                    ContractsEvent::CodeStored { code_hash, deposit_held:_, uploader: _ } => {
                         Some(GenericContractEvent::CodeStored { code_hash })
                     }
 
@@ -82,7 +85,7 @@ mod v_11_4 {
                         Some(GenericContractEvent::ContractEmitted { contract, data })
                     }
 
-                    ContractsEvent::CodeRemoved { code_hash } => {
+                    ContractsEvent::CodeRemoved { code_hash, deposit_released: _, remover: _ } => {
                         Some(GenericContractEvent::CodeRemoved { code_hash })
                     }
 
@@ -95,12 +98,17 @@ mod v_11_4 {
                         new_code_hash,
                         old_code_hash,
                     }),
-                    ContractsEvent::Called { caller, contract } => {
-                        Some(GenericContractEvent::Called {
-                            caller: caller.into(),
+                    ContractsEvent::Called { caller, contract } => match caller {
+                        CallOrigin::Signed(c) => Some(GenericContractEvent::Called {
+                            caller: Origin::Signed(c),
                             contract,
-                        })
-                    }
+                        }),
+                        CallOrigin::Root => Some(GenericContractEvent::Called {
+                            caller: Origin::Root,
+                            contract,
+                        }),
+                        CallOrigin::__Ignore(_) => None,
+                    },
 
                     ContractsEvent::DelegateCalled {
                         contract,
@@ -109,6 +117,8 @@ mod v_11_4 {
                         contract,
                         code_hash,
                     }),
+                    ContractsEvent::StorageDepositTransferredAndHeld { .. } => None,
+                    ContractsEvent::StorageDepositTransferredAndReleased { .. } => None,
                 },
                 _ => None,
             };
@@ -119,6 +129,7 @@ mod v_11_4 {
         None
     }
 }
+
 
 mod v_12_0 {
     use super::GenericContractEvent;
@@ -205,7 +216,7 @@ pub fn backwards_compatible_into_contract_event(
         return Some(event);
     }
 
-    if let Some(event) = v_11_4::into_contract_event(&event) {
+    if let Some(event) = v_13_0::into_contract_event(&event) {
         return Some(event);
     }
 
