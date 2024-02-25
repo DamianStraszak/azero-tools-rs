@@ -44,11 +44,10 @@ mod v_68 {
 	pub(crate) async fn get_contract_infos(
 		api: &Client,
 	) -> Result<BTreeMap<AccountId32, GenericContractInfo>> {
-		let storage_address = azero::storage().contracts().contract_info_of_root();
+		let storage_address = azero::storage().contracts().contract_info_of_iter();
 		let mut res = BTreeMap::new();
-		let mut stream = api.storage().at_latest().await?.iter(storage_address, 200).await?;
-		while let Ok(Some((key, value))) = stream.next().await {
-			let key = key.0;
+		let mut stream = api.storage().at_latest().await?.iter(storage_address).await?;
+		while let Some(Ok((key, value))) = stream.next().await {
 			let account = contract_info_of_key_to_account_id(&key);
 			res.insert(account, value.into());
 		}
@@ -87,11 +86,10 @@ mod v_69 {
 	pub(crate) async fn get_contract_infos(
 		api: &Client,
 	) -> Result<BTreeMap<AccountId, GenericContractInfo>> {
-		let storege_address = azero::storage().contracts().contract_info_of_root();
+		let storage_address = azero::storage().contracts().contract_info_of_iter();
 		let mut res = BTreeMap::new();
-		let mut stream = api.storage().at_latest().await?.iter(storege_address, 200).await?;
-		while let Ok(Some((key, value))) = stream.next().await {
-			let key = key.0;
+		let mut stream = api.storage().at_latest().await?.iter(storage_address).await?;
+		while let Some(Ok((key, value))) = stream.next().await {
 			let account = contract_info_of_key_to_account_id(&key);
 			res.insert(account, value.into());
 		}

@@ -1,9 +1,9 @@
-use azero_config::{alice_acc, AccountId, Client};
+use azero_config::{alice_acc, AccountId, RpcClient};
 use codec::{Decode, Encode};
 use ink_wrapper_types::{InkLangError, ReadCall};
 use pallet_contracts_primitives::ContractExecResult;
 use sp_runtime::DispatchError;
-use subxt::{rpc::types::Bytes, rpc_params};
+use subxt::{backend::legacy::rpc_methods::Bytes, rpc_params};
 
 type Weight = azero_runtime_types::v_69::runtime_types::sp_weights::weight_v2::Weight;
 
@@ -43,16 +43,16 @@ pub enum RpcCallError {
 }
 
 async fn call_and_get(
-	api: &Client,
+	api: &RpcClient,
 	args: ContractCallArgs,
 ) -> Result<ContractExecResult<u128>, RpcCallError> {
 	let params = rpc_params!["ContractsApi_call", Bytes(args.encode())];
-	let bytes: Bytes = api.rpc().request("state_call", params).await?;
+	let bytes: Bytes = api.request("state_call", params).await?;
 	Ok(ContractExecResult::decode(&mut bytes.as_ref())?)
 }
 
 async fn dry_run(
-	api: &Client,
+	api: &RpcClient,
 	origin: AccountId,
 	dest: AccountId,
 	value: u128,
@@ -71,7 +71,7 @@ async fn dry_run(
 }
 
 pub async fn contract_read_general<T: codec::Decode + Send>(
-	api: &Client,
+	api: &RpcClient,
 	origin: AccountId,
 	value: u128,
 	call: ReadCall<T>,
@@ -90,7 +90,7 @@ pub async fn contract_read_general<T: codec::Decode + Send>(
 }
 
 pub async fn contract_read<T: codec::Decode + Send>(
-	api: &Client,
+	api: &RpcClient,
 	call: ReadCall<T>,
 ) -> Result<Result<T, ContractReadError>, RpcCallError> {
 	contract_read_general(api, alice_acc(), 0, call).await
@@ -99,7 +99,7 @@ pub async fn contract_read<T: codec::Decode + Send>(
 pub type ReadFor<T> = Result<Result<T, ContractReadError>, RpcCallError>;
 
 pub async fn read_from_contract<T: codec::Decode + Send + Sync>(
-	api: &Client,
+	api: &RpcClient,
 	call: ReadCall<Result<T, InkLangError>>,
 ) -> Result<Result<T, ContractReadError>, RpcCallError> {
 	let read_result = contract_read(api, call).await?;

@@ -26,11 +26,12 @@ impl subxt::Config for Config {
 	type Hasher = <SubstrateConfig as SubxtConfig>::Hasher;
 	type Header = <SubstrateConfig as SubxtConfig>::Header;
 	type ExtrinsicParams = SubstrateExtrinsicParams<Self>;
-	//type AssetId = <SubstrateConfig as SubxtConfig>::AssetId;
+	type AssetId = <SubstrateConfig as SubxtConfig>::AssetId;
 }
 
 pub type SubmittableExtrinsic = subxt::tx::SubmittableExtrinsic<Config, Client>;
 pub type Client = OnlineClient<Config>;
+pub type RpcClient = subxt::backend::rpc::RpcClient;
 pub type BlockHash = <Config as subxt::Config>::Hash;
 pub type BlockHeader = <Config as subxt::Config>::Header;
 pub type BlockNumber = u32;

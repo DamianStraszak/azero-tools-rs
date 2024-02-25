@@ -33,7 +33,7 @@ type_complexity = "allow"
 all = "deny"
 
 [workspace.dependencies]
-subxt = {version = "0.31", features = ["jsonrpsee"]}
+subxt = {version = "0.34", features = ["jsonrpsee"]}
 tokio = { version = "1.32.0", features = ["rt-multi-thread"] }
 
 codec = { package = "parity-scale-codec", version = "3.4.0", default-features = false }

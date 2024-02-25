@@ -1,6 +1,6 @@
 use crate::{initialize_client, token_db::ContractKind};
 use anyhow::Result;
-use azero_config::Client;
+use azero_config::{RpcClient, Client};
 use azero_contracts::{
 	psp22::{
 		read::{read_decimals, read_name, read_symbol, read_total_supply},
@@ -14,7 +14,7 @@ use azero_universal::{
 		backwards_compatible_get_contract_info, backwards_compatible_get_contract_infos,
 	},
 };
-use futures::StreamExt;
+
 use parking_lot::Mutex;
 use priority_queue::PriorityQueue;
 use std::{
@@ -33,7 +33,7 @@ pub struct TokenDBTracker {
 }
 
 async fn get_psp22_metadata(
-	api: &Client,
+	api: &RpcClient,
 	address: &AccountId32,
 ) -> Result<Option<PSP22ContractMetadata>> {
 	let decimals = if let Ok(decimals) = read_decimals(api, address).await? {
@@ -55,17 +55,18 @@ async fn get_psp22_metadata(
 }
 
 async fn get_contract(
-	api: &Client,
+	rpc_client: &RpcClient,
+	client: &Client,
 	address: &AccountId32,
 	old: Option<ContractInfo>,
 ) -> Result<ContractInfo> {
-	let info = match backwards_compatible_get_contract_info(api, address).await? {
+	let info = match backwards_compatible_get_contract_info(&client, address).await? {
 		Some(info) => info,
 		None => return Err(anyhow::anyhow!("No contract info for {}", address)),
 	};
-	let root_hash = get_contract_state_root_from_trie_id(api, info.trie_id.clone(), None).await?;
+	let root_hash = get_contract_state_root_from_trie_id(rpc_client, info.trie_id.clone(), None).await?;
 	log::debug!("Getting total_supply for contract {}", address);
-	let total_supply = match read_total_supply(api, address).await? {
+	let total_supply = match read_total_supply(rpc_client, address).await? {
 		Ok(total_supply) => total_supply,
 		Err(e) => {
 			log::debug!("No total suppply for {} {:?}", address, e);
@@ -97,10 +98,10 @@ async fn get_contract(
 
 	log::debug!("NO Root match {}", address);
 	log::debug!("Getting metadata for contract {}", address);
-	let metadata = get_psp22_metadata(api, address).await?;
+	let metadata = get_psp22_metadata(rpc_client, address).await?;
 	let trie_id = info.trie_id;
 	log::debug!("Getting storage for contract {}", address);
-	let storage = get_contract_storage_from_trie_id(api, trie_id, true, None).await?;
+	let storage = get_contract_storage_from_trie_id(rpc_client, trie_id, true, None).await?;
 	log::debug!("Computing holders for contract {}", address);
 	let holders = storage_to_balances(&storage);
 
@@ -153,7 +154,7 @@ impl AccountPQ {
 
 async fn signal_contract_events(network: &str, endpoint: &str, queue: AccountPQ) -> ! {
 	loop {
-		let client = initialize_client(endpoint).await;
+		let (_, client) = initialize_client(endpoint).await;
 		let mut block_stream = match client.blocks().subscribe_finalized().await {
 			Ok(stream) => stream,
 			Err(e) => {
@@ -252,14 +253,14 @@ impl TokenDBTracker {
 		let url = self.endpoint.clone();
 		let name = self.network.clone();
 		tokio::spawn(async move { signal_contract_events(&name, &url, queue_cloned).await });
-		let mut client = initialize_client(&self.endpoint).await;
+		let (mut rpc_client, mut client) = initialize_client(&self.endpoint).await;
 		let mut fail_tracker = 0;
 		let mut iter_no: u64 = 0;
 		loop {
 			if fail_tracker >= 10 {
 				fail_tracker = 0;
 				log::warn!("{}: Initializing client again after 10 failures", self.network);
-				client = initialize_client(&self.endpoint).await;
+				(rpc_client, client) = initialize_client(&self.endpoint).await;
 			}
 			if let Some((address, prio)) = queue.pop() {
 				iter_no += 1;
@@ -267,7 +268,7 @@ impl TokenDBTracker {
 					log::info!("{}: {} contracts left in queue", self.network, queue.len());
 				}
 				let old_info = self.db.inner.read().contracts.get(&address).cloned();
-				match get_contract(&client, &address, old_info).await {
+				match get_contract(&rpc_client, &client, &address, old_info).await {
 					Ok(contract) => {
 						let mut db = self.db.inner.write();
 						db.contracts.insert(address, contract);
