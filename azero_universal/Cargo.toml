@@ -1,0 +1,19 @@
+[package]
+name = "azero_universal"
+version = "0.1.0"
+edition = "2021"
+
+[lints]
+workspace = true
+
+
+[dependencies]
+subxt = {workspace = true,  features = ["jsonrpsee"]}
+serde = { workspace = true, features = ["serde_derive"] }
+codec = { workspace = true, default-features = false }
+
+anyhow = { workspace = true }
+log = { workspace = true }
+azero_config = { workspace = true }
+azero_runtime_types = { workspace = true }
+

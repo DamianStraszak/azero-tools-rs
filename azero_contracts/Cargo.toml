@@ -1,0 +1,30 @@
+[package]
+name = "azero_contracts"
+version = "0.1.0"
+edition = "2021"
+
+[lints]
+workspace = true
+
+
+[dependencies]
+subxt = {workspace = true,  features = ["jsonrpsee"]}
+
+codec = { workspace = true, default-features = false }
+serde = { workspace = true, features = ["serde_derive"] }
+thiserror = { workspace = true }
+
+anyhow = { workspace = true }
+log = { workspace = true }
+subxt-signer = { workspace = true }
+azero_config = { workspace = true }
+azero_runtime_types = { workspace = true }
+hex = { workspace = true }
+
+
+ink-wrapper-types = {version = "0.8.0", default-features = false }
+ink_primitives = "4.2.1"
+# We specifically leave this in the old version because the new requires EventRecord which depends on the specific runtime
+# and is thus annoying to use
+pallet-contracts-primitives = "9.0.0" 
+sp-runtime = "9.0.0"

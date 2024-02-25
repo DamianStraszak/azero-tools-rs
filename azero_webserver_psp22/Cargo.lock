@@ -505,77 +505,28 @@ dependencies = [
 ]
 
 [[package]]
-name = "azero_config"
-version = "0.1.0"
-dependencies = [
- "subxt",
- "subxt-signer",
-]
-
-[[package]]
-name = "azero_contracts"
+name = "azero-tools-rs"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "azero_config",
- "azero_runtime_types",
+ "askama",
+ "axum",
+ "bincode",
+ "env_logger",
+ "frame-metadata 16.0.0",
+ "futures",
  "hex",
  "ink-wrapper-types",
  "ink_primitives",
  "log",
  "pallet-contracts-primitives",
  "parity-scale-codec",
- "serde",
- "sp-runtime",
- "subxt",
- "subxt-signer",
- "thiserror",
-]
-
-[[package]]
-name = "azero_runtime_types"
-version = "0.1.0"
-dependencies = [
- "subxt",
-]
-
-[[package]]
-name = "azero_universal"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "azero_config",
- "azero_runtime_types",
- "log",
- "parity-scale-codec",
- "serde",
- "subxt",
-]
-
-[[package]]
-name = "azero_webserver_psp22"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "askama",
- "axum",
- "azero_config",
- "azero_contracts",
- "azero_runtime_types",
- "azero_universal",
- "bincode",
- "env_logger",
- "futures",
- "hex",
- "ink-wrapper-types",
- "ink_primitives",
- "log",
- "parity-scale-codec",
  "parking_lot",
  "priority-queue",
  "rand 0.8.5",
  "serde",
  "serde_json",
+ "sp-runtime",
  "subxt",
  "thiserror",
  "tokio",
@@ -649,8 +600,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "93f2635620bf0b9d4576eb7bb9a38a55df78bd1205d26fa994b25911a69f212f"
 dependencies = [
  "bitcoin_hashes",
- "serde",
- "unicode-normalization",
 ]
 
 [[package]]
@@ -809,9 +758,9 @@ checksum = "a2bd12c1caf447e69cd4528f47f94d203fd2582878ecb9e9465484c4148a8223"
 
 [[package]]
 name = "cc"
-version = "1.0.88"
+version = "1.0.87"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "02f341c093d19155a6e41631ce5971aac4e9a868262212153124c15fa22d1cdc"
+checksum = "3286b845d0fccbdd15af433f61c5970e711987036cb468f437ff6badd70f4e24"
 
 [[package]]
 name = "cfg-if"
@@ -1761,9 +1710,9 @@ checksum = "95505c38b4572b2d910cecb0281560f54b440a19336cbbcb27bf6ce6adc6f5a8"
 
 [[package]]
 name = "hermit-abi"
-version = "0.3.8"
+version = "0.3.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "379dada1584ad501b383485dd706b8afb7a70fcbc7f4da7d780638a5a6124a60"
+checksum = "4e18e4ebaca9e578405839cdf9098dc09a11ad532d94a6105a87c00c11b8a835"
 
 [[package]]
 name = "hex"
@@ -3417,7 +3366,6 @@ dependencies = [
  "curve25519-dalek-ng",
  "merlin 3.0.0",
  "rand_core 0.6.4",
- "serde_bytes",
  "sha2 0.9.9",
  "subtle-ng",
  "zeroize",
@@ -3445,16 +3393,7 @@ version = "0.24.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6b1629c9c557ef9b293568b338dddfc8208c98a18c59d722a9d53f859d9c9b62"
 dependencies = [
- "secp256k1-sys 0.6.1",
-]
-
-[[package]]
-name = "secp256k1"
-version = "0.27.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "25996b82292a7a57ed3508f052cfff8640d38d32018784acd714758b43da9c8f"
-dependencies = [
- "secp256k1-sys 0.8.1",
+ "secp256k1-sys",
 ]
 
 [[package]]
@@ -3462,15 +3401,6 @@ name = "secp256k1-sys"
 version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "83080e2c2fc1006e625be82e5d1eb6a43b7fd9578b617fcc55814daf286bba4b"
-dependencies = [
- "cc",
-]
-
-[[package]]
-name = "secp256k1-sys"
-version = "0.8.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "70a129b9e9efbfb223753b9163c4ab3b13cff7fd9c7f010fbac25ab4099fa07e"
 dependencies = [
  "cc",
 ]
@@ -3520,15 +3450,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3fb1c873e1b9b056a4dc4c0c198b24c3ffa059243875552b2bd0933b1aee4ce2"
 dependencies = [
  "serde_derive",
-]
-
-[[package]]
-name = "serde_bytes"
-version = "0.11.14"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8b8497c313fd43ab992087548117643f6fcd935cbf36f176ffda0aacf9591734"
-dependencies = [
- "serde",
 ]
 
 [[package]]
@@ -3887,7 +3808,7 @@ dependencies = [
  "regex",
  "scale-info",
  "schnorrkel 0.9.1",
- "secp256k1 0.24.3",
+ "secp256k1",
  "secrecy",
  "serde",
  "sp-core-hashing 6.0.0",
@@ -3971,7 +3892,7 @@ dependencies = [
  "log",
  "parity-scale-codec",
  "parking_lot",
- "secp256k1 0.24.3",
+ "secp256k1",
  "sp-core",
  "sp-externalities",
  "sp-keystore",
@@ -4341,27 +4262,6 @@ dependencies = [
  "scale-info",
  "sp-core-hashing 9.0.0",
  "thiserror",
-]
-
-[[package]]
-name = "subxt-signer"
-version = "0.31.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0e1e4cf3f57cb7ee062111a8f590670efb385e60cf5805054c4a7f377b2bc65d"
-dependencies = [
- "bip39",
- "hex",
- "hmac 0.12.1",
- "parity-scale-codec",
- "pbkdf2 0.12.2",
- "regex",
- "schnorrkel 0.10.2",
- "secp256k1 0.27.0",
- "secrecy",
- "sha2 0.10.8",
- "sp-core-hashing 9.0.0",
- "thiserror",
- "zeroize",
 ]
 
 [[package]]
@@ -4793,9 +4693,9 @@ checksum = "3354b9ac3fae1ff6755cb6db53683adb661634f67557942dea4facebec0fee4b"
 
 [[package]]
 name = "unicode-normalization"
-version = "0.1.22"
+version = "0.1.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5c5713f0fc4b5db668a2ac63cdb7bb4469d8c9fed047b1d0292cc7b0ce2ba921"
+checksum = "a56d1686db2308d901306f92a263857ef59ea39678a5458e7cb17f01415101f5"
 dependencies = [
  "tinyvec",
 ]

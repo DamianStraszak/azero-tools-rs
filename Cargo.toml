@@ -1,40 +1,64 @@
-[package]
-name = "azero-tools-rs"
-version = "0.1.0"
+[workspace]
+members = [
+    "azero_webserver_psp22",
+    "azero_config",
+    "azero_runtime_types",
+    "azero_universal",
+    "azero_contracts",
+]
+
+# We exclude any crates that would depend on non mutually
+# exclusive feature flags and thus can't compile with the
+# workspace:
+resolver = "2"
+
+[workspace.package]
+authors = ["Damian Straszak"]
 edition = "2021"
+version = "0.0.1"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[workspace.lints.rust]
+bad_style = "deny"
+improper_ctypes = "deny"
+non_shorthand_field_patterns = "deny"
+no_mangle_generic_items = "deny"
+overflowing_literals = "deny"
+path_statements = "deny"
+patterns_in_fns_without_body = "deny"
+unconditional_recursion = "deny"
+unused_allocation = "deny"
+unused_comparisons = "deny"
+unused_parens = "deny"
+unused_extern_crates = "deny"
 
-[dependencies]
+[workspace.lints.clippy]
+type_complexity = "allow"
+all = "deny"
+
+[workspace.dependencies]
 subxt = {version = "0.31", features = ["jsonrpsee"]}
 tokio = { version = "1.32.0", features = ["rt-multi-thread"] }
 
 codec = { package = "parity-scale-codec", version = "3.4.0", default-features = false }
-frame-metadata = { version = "16.0.0", default-features = false, features = ["current", "std"] }
 futures = { version = "0.3.27", default-features = false, features = ["std"] }
 hex = "0.4.3"
+scale-value = "0.12.0"
 serde = { version = "1.0.188", features = ["serde_derive"] }
 serde_json = "1.0.107"
 thiserror = "1.0.48"
 
-ink-wrapper-types = {version = "0.8.0", default-features = false }
-ink_primitives = "4.2.1"
+azero_config = { path = "azero_config" }
+azero_runtime_types = { path = "azero_runtime_types" }
+azero_universal = { path = "azero_universal" }
+azero_contracts = { path = "azero_contracts" }
 
-# We specifically leave this in the old version because the new requires EventRecord which depends on the specific runtime
-# and is thus annoying to use
-pallet-contracts-primitives = "9.0.0" 
-sp-runtime = "9.0.0"
+
 anyhow = "1.0.75"
 parking_lot = "0.12.1"
 log = "0.4.20"
 rand = "0.8.5"
-env_logger = "0.11.2"
-bincode = "1.3.3"
-axum = "0.7.4"
-askama = "0.12.1"
-tower-http = { version = "0.5.2", features = ["fs"] }
-priority-queue = "1.3.2"
-
-[[bin]]
-name = "webserver"
-path = "src/webserver/main.rs"
+env_logger = "0.10.0"
+subxt-signer = "0.31.0"
+tokio-stream = "0.1.14"
+num-traits = "0.2.17"
+chrono = "0.4.0"

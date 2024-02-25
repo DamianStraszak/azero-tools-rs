@@ -20,9 +20,12 @@ It is currently deployed on https://azero-tools.com.
 
 ## Running instructions
 
-You need cargo installed to run this project. 
-
-`cargo run --release` will run the server at `http://127.0.0.1:3000`.
+You need cargo installed to run this project. To run the webserver for psp22 tokens run
+```
+cd azero_webserver_psp22 
+cargo run --release
+``` 
+This will run the server at `http://127.0.0.1:3000`.
 
 ## Issues and Bugs
 

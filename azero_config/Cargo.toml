@@ -1,0 +1,13 @@
+[package]
+name = "azero_config"
+version = "0.1.0"
+edition = "2021"
+
+[lints]
+workspace = true
+
+
+[dependencies]
+subxt = {workspace = true,  features = ["jsonrpsee"]}
+subxt-signer = { workspace = true }
+
