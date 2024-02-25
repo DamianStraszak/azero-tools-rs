@@ -12,6 +12,8 @@ This project implements a rust web-server that allows to display basic informati
 - [askama](https://github.com/djc/askama) for HTML templates using rust,
 - [axum](https://github.com/tokio-rs/axum) for HTTP server.
 
+The implementation of the server is in the `azero_webserver_psp22` crate. The remaining crates are libraries useful for interacting with the Aleph Zero chain using rust.
+
 
 The application could be stateless, but then it would take too much time to scrape the information from chain on restart, hence the server makes backups in json files from time to time.
 

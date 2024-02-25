@@ -7,9 +7,6 @@ members = [
     "azero_contracts",
 ]
 
-# We exclude any crates that would depend on non mutually
-# exclusive feature flags and thus can't compile with the
-# workspace:
 resolver = "2"
 
 [workspace.package]
@@ -42,7 +39,6 @@ tokio = { version = "1.32.0", features = ["rt-multi-thread"] }
 codec = { package = "parity-scale-codec", version = "3.4.0", default-features = false }
 futures = { version = "0.3.27", default-features = false, features = ["std"] }
 hex = "0.4.3"
-scale-value = "0.12.0"
 serde = { version = "1.0.188", features = ["serde_derive"] }
 serde_json = "1.0.107"
 thiserror = "1.0.48"
