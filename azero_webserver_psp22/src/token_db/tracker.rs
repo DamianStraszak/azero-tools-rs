@@ -1,6 +1,6 @@
 use crate::{initialize_client, token_db::ContractKind};
 use anyhow::Result;
-use azero_config::{RpcClient, Client};
+use azero_config::{Client, RpcClient};
 use azero_contracts::{
 	psp22::{
 		read::{read_decimals, read_name, read_symbol, read_total_supply},
@@ -60,11 +60,12 @@ async fn get_contract(
 	address: &AccountId32,
 	old: Option<ContractInfo>,
 ) -> Result<ContractInfo> {
-	let info = match backwards_compatible_get_contract_info(&client, address).await? {
+	let info = match backwards_compatible_get_contract_info(client, address).await? {
 		Some(info) => info,
 		None => return Err(anyhow::anyhow!("No contract info for {}", address)),
 	};
-	let root_hash = get_contract_state_root_from_trie_id(rpc_client, info.trie_id.clone(), None).await?;
+	let root_hash =
+		get_contract_state_root_from_trie_id(rpc_client, info.trie_id.clone(), None).await?;
 	log::debug!("Getting total_supply for contract {}", address);
 	let total_supply = match read_total_supply(rpc_client, address).await? {
 		Ok(total_supply) => total_supply,

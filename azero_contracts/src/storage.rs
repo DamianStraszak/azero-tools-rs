@@ -1,7 +1,10 @@
 use std::collections::BTreeMap;
 
 use anyhow::Result;
-use subxt::{backend::legacy::{rpc_methods::Bytes, LegacyRpcMethods}, rpc_params};
+use subxt::{
+	backend::legacy::{rpc_methods::Bytes, LegacyRpcMethods},
+	rpc_params,
+};
 
 use azero_config::{BlockHash, Config, RpcClient};
 
@@ -15,7 +18,7 @@ pub async fn get_contract_state_root_from_trie_id(
 	let mut key: Vec<u8> = Vec::from(":child_storage:default:".as_bytes());
 	key.extend_from_slice(&trie_id);
 	let rpc = LegacyRpcMethods::<Config>::new(api.clone());
-	Ok(rpc.state_get_storage(&key, maybe_block_hash).await?.map(|s| s))
+	Ok(rpc.state_get_storage(&key, maybe_block_hash).await?)
 }
 
 pub async fn get_contract_storage_from_trie_id(
@@ -53,7 +56,3 @@ pub async fn get_contract_storage_from_trie_id(
 	}
 	Ok(res)
 }
-
-
-
-

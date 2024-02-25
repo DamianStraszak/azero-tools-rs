@@ -1,7 +1,3 @@
-use azero_webserver_psp22::{
-	token_db::{tracker::TokenDBTracker, TokenDB},
-	MAINNET_TOKEN_DB_FILEPATH_JSON, TESTNET_TOKEN_DB_FILEPATH_JSON,
-};
 use askama::Template;
 use axum::{
 	extract::{Path, Query},
@@ -11,6 +7,10 @@ use axum::{
 	Router,
 };
 use azero_config::{WS_AZERO_MAINNET, WS_AZERO_TESTNET};
+use azero_webserver_psp22::{
+	token_db::{tracker::TokenDBTracker, TokenDB},
+	MAINNET_TOKEN_DB_FILEPATH_JSON, TESTNET_TOKEN_DB_FILEPATH_JSON,
+};
 use serde::Deserialize;
 use std::env;
 use tower_http::services::ServeDir;
