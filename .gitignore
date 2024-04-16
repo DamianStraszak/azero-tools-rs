@@ -1,1 +1,11 @@
-/target
+# IDEs
+**/.idea
+/.vscode
+.projectile
+*.swp
+
+# Rust
+.cargo/config
+
+**/target/
+**/*.rs.bk

@@ -89,10 +89,10 @@ mod v_69 {
 	}
 }
 
-mod v_68 {
+mod v_73 {
 	use super::{GenericContractEvent, Origin};
 	use azero_config::Config;
-	use azero_runtime_types::v_68::{
+	use azero_runtime_types::v_73::{
 		runtime_types::pallet_contracts::{pallet::Event as ContractsEvent, Origin as CallOrigin},
 		Event,
 	};
@@ -109,13 +109,13 @@ mod v_68 {
 
 					ContractsEvent::Terminated { contract, beneficiary } =>
 						Some(GenericContractEvent::Terminated { contract, beneficiary }),
-					ContractsEvent::CodeStored { code_hash } =>
+					ContractsEvent::CodeStored { code_hash, deposit_held: _, uploader: _ } =>
 						Some(GenericContractEvent::CodeStored { code_hash }),
 
 					ContractsEvent::ContractEmitted { contract, data } =>
 						Some(GenericContractEvent::ContractEmitted { contract, data }),
 
-					ContractsEvent::CodeRemoved { code_hash } =>
+					ContractsEvent::CodeRemoved { code_hash, deposit_released: _, remover: _ } =>
 						Some(GenericContractEvent::CodeRemoved { code_hash }),
 
 					ContractsEvent::ContractCodeUpdated {
@@ -139,6 +139,8 @@ mod v_68 {
 
 					ContractsEvent::DelegateCalled { contract, code_hash } =>
 						Some(GenericContractEvent::DelegateCalled { contract, code_hash }),
+					ContractsEvent::StorageDepositTransferredAndHeld { .. } => None,
+					ContractsEvent::StorageDepositTransferredAndReleased { .. } => None,
 				},
 				_ => None,
 			};
@@ -153,7 +155,7 @@ mod v_68 {
 pub fn backwards_compatible_into_contract_event(
 	event: EventDetails<Config>,
 ) -> Option<GenericContractEvent> {
-	if let Some(event) = v_68::into_contract_event(&event) {
+	if let Some(event) = v_73::into_contract_event(&event) {
 		return Some(event);
 	}
 

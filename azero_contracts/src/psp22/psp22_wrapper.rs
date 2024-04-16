@@ -220,6 +220,7 @@ pub trait PSP22Metadata {
 		&self,
 	) -> ink_wrapper_types::ReadCall<Result<u8, ink_wrapper_types::InkLangError>>;
 }
+
 impl PSP22Metadata for Instance {
 	#[doc = "Returns the token name."]
 	#[allow(dead_code, clippy::too_many_arguments)]

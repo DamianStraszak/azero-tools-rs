@@ -12,13 +12,13 @@ fn contract_info_of_key_to_account_id(key: &[u8]) -> AccountId32 {
 	AccountId32::from(array_u8)
 }
 
-mod v_68 {
+mod v_73 {
 	use std::collections::BTreeMap;
 
 	use super::{contract_info_of_key_to_account_id, GenericContractInfo};
 	use anyhow::Result;
 	use azero_config::Client;
-	use azero_runtime_types::v_68 as azero;
+	use azero_runtime_types::v_73 as azero;
 	use subxt::utils::AccountId32;
 	impl From<azero::runtime_types::pallet_contracts::storage::ContractInfo> for GenericContractInfo {
 		fn from(info: azero::runtime_types::pallet_contracts::storage::ContractInfo) -> Self {
@@ -107,7 +107,7 @@ pub async fn backwards_compatible_get_contract_infos(
 		Err(e) => e,
 	};
 
-	let err_68 = match v_68::get_contract_infos(api).await {
+	let err_68 = match v_73::get_contract_infos(api).await {
 		Ok(suc) => {
 			return Ok(suc);
 		},
@@ -126,7 +126,7 @@ pub async fn backwards_compatible_get_contract_info(
 		},
 		Err(e) => e,
 	};
-	let err_68 = match v_68::get_contract_info(api, address).await {
+	let err_68 = match v_73::get_contract_info(api, address).await {
 		Ok(suc) => {
 			return Ok(suc);
 		},
