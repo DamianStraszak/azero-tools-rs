@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "azero_webserver_psp22",
+    "azero_contract_event_indexer",
     "azero_config",
     "azero_runtime_types",
     "azero_universal",
