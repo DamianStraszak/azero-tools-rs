@@ -79,7 +79,12 @@ async fn scrape_blocks(
 
 		for event in events.iter() {
 			match event {
-				Ok(event) =>
+				Ok(event) => {
+					let extrinsic_index = match event.phase() {
+						subxt::events::Phase::ApplyExtrinsic(i) => Some(i),
+						_ => None,
+					};
+					let event_index = event.index();
 					if let Some(e) = backwards_compatible_into_contract_event(event) {
 						use GenericContractEvent::*;
 						match e {
@@ -87,12 +92,15 @@ async fn scrape_blocks(
 								contract_events.push(Event {
 									contract_account_id: contract,
 									block_num: num,
+									event_index,
+									extrinsic_index,
 									data,
 								});
 							},
 							_ => {},
 						}
-					},
+					}
+				},
 				Err(e) => {
 					log::error!("Error decoding event: {}", e);
 				},

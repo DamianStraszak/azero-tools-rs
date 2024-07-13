@@ -1,7 +1,7 @@
 use axum::{extract::Query, http::StatusCode, response::IntoResponse, routing::get, Json, Router};
 use azero_config::AccountId;
 use azero_contract_event_indexer::{
-	event_db::{get_events, DbError, EventNoContract, DATABASE_FILE},
+	event_db::{get_events_by_contract, get_events_by_range, DbError, DATABASE_FILE},
 	start_indexer,
 };
 use r2d2::Pool;
@@ -13,14 +13,20 @@ use tokio::sync::Mutex;
 type DbPool = Pool<SqliteConnectionManager>;
 
 #[derive(Debug, Deserialize)]
-struct GetEventsParams {
+struct GetEventsByContractParams {
 	block_start: u32,
 	block_stop: u32,
 	contract_address: AccountId,
 }
 
-async fn handle_get_events(
-	Query(params): Query<GetEventsParams>,
+#[derive(Debug, Deserialize)]
+struct GetEventsByRangeParams {
+	block_start: u32,
+	block_stop: u32,
+}
+
+async fn handle_get_events_by_contract(
+	Query(params): Query<GetEventsByContractParams>,
 	db_pool: Arc<Mutex<DbPool>>,
 ) -> impl IntoResponse {
 	
@@ -30,11 +36,39 @@ async fn handle_get_events(
 		pool.get().unwrap()
 	};
 
-	match get_events(params.block_start, params.block_stop, &params.contract_address, &conn) {
+	match get_events_by_contract(params.block_start, params.block_stop, &params.contract_address, &conn) {
 		Ok(events) => {
-			let events_no_contract: Vec<EventNoContract> =
-				events.into_iter().map(|e| e.into()).collect();
-			Json(events_no_contract).into_response()
+			Json(events).into_response()
+		},
+		Err(DbError::BlocksNotInRange(start, stop, block_start, block_stop)) => (
+			StatusCode::BAD_REQUEST,
+			format!(
+				"Blocks not in range: {}-{}, requested: {}-{}",
+				start, stop, block_start, block_stop
+			),
+		)
+			.into_response(),
+		Err(DbError::TooLargeResult) =>
+			(StatusCode::PAYLOAD_TOO_LARGE, "Result too large").into_response(),
+		Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, format!("Internal server error: {}", e))
+			.into_response(),
+	}
+}
+
+async fn handle_get_events_by_range(
+	Query(params): Query<GetEventsByRangeParams>,
+	db_pool: Arc<Mutex<DbPool>>,
+) -> impl IntoResponse {
+	
+	let conn = 
+	{
+		let pool = db_pool.lock().await;
+		pool.get().unwrap()
+	};
+
+	match get_events_by_range(params.block_start, params.block_stop, &conn) {
+		Ok(events) => {
+			Json(events).into_response()
 		},
 		Err(DbError::BlocksNotInRange(start, stop, block_start, block_stop)) => (
 			StatusCode::BAD_REQUEST,
@@ -63,11 +97,17 @@ async fn main() {
 	let shared_pool = Arc::new(Mutex::new(pool));
 
 	let app = Router::new().route(
-		"/events",
+		"/events_by_contract",
 		get({
 			let pool = Arc::clone(&shared_pool);
-			move |query| handle_get_events(query, pool)
+			move |query| handle_get_events_by_contract(query, pool)
 		}),
+	).route(
+		"/events_by_range",
+		get({
+			let pool = Arc::clone(&shared_pool);
+			move |query| handle_get_events_by_range(query, pool)
+		})
 	);
 
 	let addr = "0.0.0.0:3000";
