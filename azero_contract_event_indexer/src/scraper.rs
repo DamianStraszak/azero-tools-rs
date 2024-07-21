@@ -7,7 +7,7 @@ use azero_universal::contract_events::{
 use futures::channel::oneshot;
 use subxt::backend::legacy::LegacyRpcMethods;
 
-use crate::{event_db::Event, get_finalized_block_num, BlockHash, Client, RpcClient};
+use crate::{event_db::{Event}, get_finalized_block_num, BlockHash, Client, RpcClient};
 
 use super::event_db;
 
@@ -89,13 +89,31 @@ async fn scrape_blocks(
 						use GenericContractEvent::*;
 						match e {
 							ContractEmitted { contract, data } => {
-								contract_events.push(Event {
-									contract_account_id: contract,
-									block_num: num,
-									event_index,
-									extrinsic_index,
-									data,
-								});
+								let extrinsic_index = match extrinsic_index {
+									Some(i) => i as u32,
+									None => {
+										log::error!("Extrinsic index not found for event {} at block {}", event_index, num);
+										continue;
+									}
+								};
+								contract_events.push(Event::new_emitted(contract, num, event_index, extrinsic_index, data));
+							},
+							Called { caller, contract } => {
+								let extrinsic_index = match extrinsic_index {
+									Some(i) => i as u32,
+									None => {
+										log::error!("Extrinsic index not found for event {} at block {}", event_index, num);
+										continue;
+									}
+								};
+								let caller = match caller {
+									azero_universal::contract_events::Origin::Signed(c) => c,
+									azero_universal::contract_events::Origin::Root => {
+										log::error!("Root caller not supported");
+										continue;
+									},
+								};
+								contract_events.push(Event::new_called(contract, num, event_index, extrinsic_index, caller));
 							},
 							_ => {},
 						}

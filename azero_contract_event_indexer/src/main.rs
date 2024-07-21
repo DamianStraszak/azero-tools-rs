@@ -29,17 +29,18 @@ async fn handle_get_events_by_contract(
 	Query(params): Query<GetEventsByContractParams>,
 	db_pool: Arc<Mutex<DbPool>>,
 ) -> impl IntoResponse {
-	
-	let conn = 
-	{
+	let conn = {
 		let pool = db_pool.lock().await;
 		pool.get().unwrap()
 	};
 
-	match get_events_by_contract(params.block_start, params.block_stop, &params.contract_address, &conn) {
-		Ok(events) => {
-			Json(events).into_response()
-		},
+	match get_events_by_contract(
+		params.block_start,
+		params.block_stop,
+		&params.contract_address,
+		&conn,
+	) {
+		Ok(events) => Json(events).into_response(),
 		Err(DbError::BlocksNotInRange(start, stop, block_start, block_stop)) => (
 			StatusCode::BAD_REQUEST,
 			format!(
@@ -59,17 +60,13 @@ async fn handle_get_events_by_range(
 	Query(params): Query<GetEventsByRangeParams>,
 	db_pool: Arc<Mutex<DbPool>>,
 ) -> impl IntoResponse {
-	
-	let conn = 
-	{
+	let conn = {
 		let pool = db_pool.lock().await;
 		pool.get().unwrap()
 	};
 
 	match get_events_by_range(params.block_start, params.block_stop, &conn) {
-		Ok(events) => {
-			Json(events).into_response()
-		},
+		Ok(events) => Json(events).into_response(),
 		Err(DbError::BlocksNotInRange(start, stop, block_start, block_stop)) => (
 			StatusCode::BAD_REQUEST,
 			format!(
@@ -96,19 +93,21 @@ async fn main() {
 	let pool = Pool::builder().build(manager).unwrap();
 	let shared_pool = Arc::new(Mutex::new(pool));
 
-	let app = Router::new().route(
-		"/events_by_contract",
-		get({
-			let pool = Arc::clone(&shared_pool);
-			move |query| handle_get_events_by_contract(query, pool)
-		}),
-	).route(
-		"/events_by_range",
-		get({
-			let pool = Arc::clone(&shared_pool);
-			move |query| handle_get_events_by_range(query, pool)
-		})
-	);
+	let app = Router::new()
+		.route(
+			"/events_by_contract",
+			get({
+				let pool = Arc::clone(&shared_pool);
+				move |query| handle_get_events_by_contract(query, pool)
+			}),
+		)
+		.route(
+			"/events_by_range",
+			get({
+				let pool = Arc::clone(&shared_pool);
+				move |query| handle_get_events_by_range(query, pool)
+			}),
+		);
 
 	let addr = "0.0.0.0:3000";
 	let listener = tokio::net::TcpListener::bind(addr).await.unwrap();

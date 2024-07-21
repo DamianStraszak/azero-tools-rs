@@ -8,8 +8,9 @@ pub type AccountId = azero_config::AccountId;
 pub mod event_db;
 pub mod scraper;
 
-//const ENDPOINTS : [&str; 3] = ["wss://aleph-zero-rpc.dwellir.com", "wss://aleph-zero.api.onfinality.io/public-ws", "wss://ws.azero.dev"];
-const ENDPOINTS: [&str; 1] = ["wss://ws.azero.dev"]; //"wss://ws.azero.dev", , 
+//const ENDPOINTS : [&str; 3] = ["wss://aleph-zero-rpc.dwellir.com",
+// "wss://aleph-zero.api.onfinality.io/public-ws", "wss://ws.azero.dev"];
+const ENDPOINTS: [&str; 1] = ["wss://ws.azero.dev"]; //"wss://ws.azero.dev", ,
 
 pub fn random_endpoint() -> &'static str {
 	let index = rand::random::<usize>() % ENDPOINTS.len();
