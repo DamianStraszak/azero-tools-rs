@@ -6,6 +6,7 @@ members = [
     "azero_runtime_types",
     "azero_universal",
     "azero_contracts",
+    "common_indexer",
 ]
 
 resolver = "2"
@@ -43,11 +44,15 @@ hex = "0.4.3"
 serde = { version = "1.0.188", features = ["serde_derive"] }
 serde_json = "1.0.107"
 thiserror = "1.0.48"
+primitive-types = "0.12.2"
+sp-core-hashing = "9.0.0"
 
 azero_config = { path = "azero_config" }
 azero_runtime_types = { path = "azero_runtime_types" }
 azero_universal = { path = "azero_universal" }
 azero_contracts = { path = "azero_contracts" }
+azero_contract_event_indexer = { path = "azero_contract_event_indexer" }
+common_indexer = { path = "common_indexer" }
 
 
 anyhow = "1.0.75"

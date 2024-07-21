@@ -66,7 +66,7 @@ pub struct CalledDetails {
 }
 
 
-pub struct DBEvent {
+struct DBEvent {
 	pub contract_account_id: [u8; 32],
 	pub block_num: u32,
 	pub event_index: u32,
@@ -338,7 +338,7 @@ fn event_from_row(row: &rusqlite::Row) -> rusqlite::Result<Event> {
 	let extrinsic_index: u32 = row.get(3)?;
 	let event_type: String = row.get(4)?;
 	let caller: Option<[u8; 32]> = row.get(5)?;
-	let data: Vec<u8> = row.get(4)?;
+	let data: Vec<u8> = row.get(6)?;
 
 	Ok(
 		DBEvent {

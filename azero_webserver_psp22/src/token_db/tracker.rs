@@ -1,4 +1,5 @@
-use crate::{initialize_client, token_db::ContractKind};
+use crate::{ token_db::ContractKind};
+use azero_universal::initialize_client;
 use anyhow::Result;
 use azero_config::{Client, RpcClient};
 use azero_contracts::{

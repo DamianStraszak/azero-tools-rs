@@ -11,6 +11,7 @@ workspace = true
 subxt = {workspace = true,  features = ["jsonrpsee"]}
 serde = { workspace = true, features = ["serde_derive"] }
 codec = { workspace = true, default-features = false }
+tokio = { workspace = true }
 
 anyhow = { workspace = true }
 log = { workspace = true }
