@@ -7,7 +7,7 @@ use azero_universal::contract_events::{
 use futures::channel::oneshot;
 use subxt::backend::legacy::LegacyRpcMethods;
 
-use crate::{event_db::{Event}, get_finalized_block_num, BlockHash, Client, RpcClient};
+use crate::{event_db::Event, get_finalized_block_num, BlockHash, Client, RpcClient};
 
 use super::event_db;
 
@@ -89,23 +89,31 @@ async fn scrape_blocks(
 						use GenericContractEvent::*;
 						match e {
 							ContractEmitted { contract, data } => {
-								let extrinsic_index = match extrinsic_index {
-									Some(i) => i as u32,
-									None => {
-										log::error!("Extrinsic index not found for event {} at block {}", event_index, num);
-										continue;
-									}
-								};
-								contract_events.push(Event::new_emitted(contract, num, event_index, extrinsic_index, data));
+								let extrinsic_index =
+									match extrinsic_index {
+										Some(i) => i as u32,
+										None => {
+											log::error!("Extrinsic index not found for event {} at block {}", event_index, num);
+											continue;
+										},
+									};
+								contract_events.push(Event::new_emitted(
+									contract,
+									num,
+									event_index,
+									extrinsic_index,
+									data,
+								));
 							},
 							Called { caller, contract } => {
-								let extrinsic_index = match extrinsic_index {
-									Some(i) => i as u32,
-									None => {
-										log::error!("Extrinsic index not found for event {} at block {}", event_index, num);
-										continue;
-									}
-								};
+								let extrinsic_index =
+									match extrinsic_index {
+										Some(i) => i as u32,
+										None => {
+											log::error!("Extrinsic index not found for event {} at block {}", event_index, num);
+											continue;
+										},
+									};
 								let caller = match caller {
 									azero_universal::contract_events::Origin::Signed(c) => c,
 									azero_universal::contract_events::Origin::Root => {
@@ -113,7 +121,13 @@ async fn scrape_blocks(
 										continue;
 									},
 								};
-								contract_events.push(Event::new_called(contract, num, event_index, extrinsic_index, caller));
+								contract_events.push(Event::new_called(
+									contract,
+									num,
+									event_index,
+									extrinsic_index,
+									caller,
+								));
 							},
 							_ => {},
 						}
@@ -195,7 +209,7 @@ pub async fn scrape() -> ! {
 		let len = indexed_to + 1 - indexed_from;
 		if elapsed > 15.0 {
 			let rate = (len - prev_len) as f64 / elapsed;
-			println!("Indexed from: {}, to: {}, rate: {}/s", indexed_from, indexed_to, rate);
+			println!("Indexed from: {}, to: {}, rate: {:.3}/s", indexed_from, indexed_to, rate);
 			prev_checkpoint = checkpoint;
 			prev_len = len;
 			finalized_num = match get_finalized_block_num().await {

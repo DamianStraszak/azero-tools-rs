@@ -2,12 +2,12 @@
 
 ## Running instructions
 
-You need cargo installed to run this project. To run the webserver for psp22 tokens run
+You need cargo installed to run this project. To run the webserver 
 ```
-cd azero_contract_event_indexer
+cd common_indexer
 cargo run --release
 ``` 
-This will run the server at `http://127.0.0.1:3000`.
+This will run the server at `http://127.0.0.1:3001`.
 
 ## Example queries
 

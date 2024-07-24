@@ -1,4 +1,5 @@
 use azero_config::BlockHeader;
+use serde::{Deserialize, Serialize};
 
 pub type Client = azero_config::Client;
 pub type RpcClient = azero_config::RpcClient;
@@ -7,6 +8,12 @@ pub type AccountId = azero_config::AccountId;
 
 pub mod event_db;
 pub mod scraper;
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct QueryResult<T> {
+	pub data: T,
+	pub is_complete: bool,
+}
 
 //const ENDPOINTS : [&str; 3] = ["wss://aleph-zero-rpc.dwellir.com",
 // "wss://aleph-zero.api.onfinality.io/public-ws", "wss://ws.azero.dev"];

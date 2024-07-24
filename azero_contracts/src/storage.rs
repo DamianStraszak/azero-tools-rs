@@ -1,8 +1,8 @@
-use std::collections::BTreeMap;
+use anyhow::Result;
 use azero_universal::contract_info::backwards_compatible_get_contract_info;
 use codec::Decode;
 use sp_core_hashing::blake2_128;
-use anyhow::Result;
+use std::collections::BTreeMap;
 use subxt::{
 	backend::legacy::{rpc_methods::Bytes, LegacyRpcMethods},
 	rpc_params,

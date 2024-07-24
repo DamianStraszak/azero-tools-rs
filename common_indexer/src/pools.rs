@@ -1,13 +1,13 @@
-use azero_contracts::storage::{get_contract_storage_from_address, get_contract_storage_root_from_address, ContractStorage};
 use anyhow::Result;
 use azero_config::{AccountId, BlockHash, RpcClient};
+use azero_contracts::storage::{
+	get_contract_storage_from_address, get_contract_storage_root_from_address, ContractStorage,
+};
 use codec::Decode;
 use primitive_types::U256;
 use std::str::FromStr;
 
-
 use std::collections::{BTreeMap, BTreeSet};
-
 
 type CodecPairsKey = (AccountId, AccountId);
 type CodecPairsValue = (AccountId, u8);
@@ -60,7 +60,44 @@ impl Router {
 	}
 }
 
-
+// Below generated using ink-wrapper
+#[allow(dead_code, clippy::large_enum_variant)]
+#[derive(Debug, Clone, PartialEq, Eq, Decode)]
+pub enum PairEvent {
+	Mint {
+		sender: AccountId,
+		amount_0: u128,
+		amount_1: u128,
+	},
+	Burn {
+		sender: AccountId,
+		amount_0: u128,
+		amount_1: u128,
+		to: AccountId,
+	},
+	Swap {
+		sender: AccountId,
+		amount_0_in: u128,
+		amount_1_in: u128,
+		amount_0_out: u128,
+		amount_1_out: u128,
+		to: AccountId,
+	},
+	Sync {
+		reserve_0: u128,
+		reserve_1: u128,
+	},
+	Transfer {
+		from: Option<AccountId>,
+		to: Option<AccountId>,
+		value: u128,
+	},
+	Approval {
+		owner: AccountId,
+		spender: AccountId,
+		amount: u128,
+	},
+}
 
 #[derive(Decode)]
 struct CodecPSP22Data {
@@ -125,7 +162,6 @@ impl Pair {
 		Ok((address.clone(), codec_pair.pair).into())
 	}
 }
-
 
 const ROUTER_ADDRESS: &str = "5DRnWewtFkLtuKT6pD7QVto4fXSEjoGvX6pccjVpdCpaz2EV";
 

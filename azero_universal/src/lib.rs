@@ -33,4 +33,3 @@ pub async fn initialize_client(url: &str) -> (RpcClient, Client) {
 		}
 	}
 }
-

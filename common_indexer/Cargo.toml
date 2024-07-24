@@ -22,12 +22,15 @@ log = { workspace = true }
 rand = { workspace = true }
 env_logger = { workspace = true }
 primitive-types = { workspace = true }
+reqwest = { workspace = true }
+chrono ={ workspace = true }
 
 azero_config = { workspace = true }
 azero_runtime_types = { workspace = true }
 azero_universal = { workspace = true }
 azero_contracts = { workspace = true }
 azero_contract_event_indexer = { workspace = true }
+price_feed = { workspace = true }
 
 
 axum = "0.7.4"

@@ -1,20 +1,19 @@
-use crate::AccountId;
+use crate::{AccountId, QueryResult};
 use rusqlite::{params, Connection, Result as SqliteResult};
 use serde::{Deserialize, Serialize};
 use serde_with::{hex::Hex, serde_as};
 use std::path::Path;
 use thiserror::Error;
 pub const DATABASE_FILE: &str = "db/mainnet_events.db";
-const MAX_TOTAL_RESULT_SIZE: usize = 256000;
+const MAX_TOTAL_RESULT_SIZE: usize = 1256000;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum EventType {
 	Emitted(EmittedDetails),
 	Called(CalledDetails),
 }
 
-
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Event {
 	pub contract_account_id: AccountId,
 	pub block_num: u32,
@@ -25,14 +24,20 @@ pub struct Event {
 
 impl Event {
 	fn size(&self) -> usize {
-		let base = 32 + 4 + 4+ 4;
+		let base = 32 + 4 + 4 + 4;
 		match &self.event_type {
 			EventType::Emitted(details) => base + details.data.len(),
 			EventType::Called(_) => base + 32,
 		}
 	}
 
-	pub fn new_emitted(contract_account_id: AccountId, block_num: u32, event_index: u32, extrinsic_index: u32, data: Vec<u8>) -> Self {
+	pub fn new_emitted(
+		contract_account_id: AccountId,
+		block_num: u32,
+		event_index: u32,
+		extrinsic_index: u32,
+		data: Vec<u8>,
+	) -> Self {
 		Self {
 			contract_account_id,
 			block_num,
@@ -42,7 +47,13 @@ impl Event {
 		}
 	}
 
-	pub fn new_called(contract_account_id: AccountId, block_num: u32, event_index: u32, extrinsic_index: u32, caller: AccountId) -> Self {
+	pub fn new_called(
+		contract_account_id: AccountId,
+		block_num: u32,
+		event_index: u32,
+		extrinsic_index: u32,
+		caller: AccountId,
+	) -> Self {
 		Self {
 			contract_account_id,
 			block_num,
@@ -54,17 +65,16 @@ impl Event {
 }
 
 #[serde_as]
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct EmittedDetails {
 	#[serde_as(as = "Hex")]
 	pub data: Vec<u8>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct CalledDetails {
 	pub caller: AccountId,
 }
-
 
 struct DBEvent {
 	pub contract_account_id: [u8; 32],
@@ -76,7 +86,6 @@ struct DBEvent {
 	pub data: Vec<u8>,
 }
 
-
 impl From<Event> for DBEvent {
 	fn from(event: Event) -> Self {
 		let contract_account_id = event.contract_account_id.0;
@@ -85,7 +94,7 @@ impl From<Event> for DBEvent {
 		let extrinsic_index = event.extrinsic_index;
 		match event.event_type {
 			EventType::Emitted(details) => Self {
-				contract_account_id: contract_account_id,
+				contract_account_id,
 				block_num,
 				event_index,
 				extrinsic_index,
@@ -94,7 +103,7 @@ impl From<Event> for DBEvent {
 				data: details.data,
 			},
 			EventType::Called(details) => Self {
-				contract_account_id: contract_account_id,
+				contract_account_id,
 				block_num,
 				event_index,
 				extrinsic_index,
@@ -103,7 +112,6 @@ impl From<Event> for DBEvent {
 				data: Vec::new(),
 			},
 		}
-
 	}
 }
 
@@ -115,23 +123,16 @@ impl From<DBEvent> for Event {
 		let extrinsic_index = event.extrinsic_index;
 		let event_type = match event.event_type.as_str() {
 			"emitted" => EventType::Emitted(EmittedDetails { data: event.data }),
-			"called" => EventType::Called(CalledDetails { caller: AccountId::from(event.caller.unwrap()) }),
+			"called" =>
+				EventType::Called(CalledDetails { caller: AccountId::from(event.caller.unwrap()) }),
 			_ => panic!("Unknown event type"),
 		};
-		Event {
-			contract_account_id,
-			block_num,
-			event_index,
-			extrinsic_index,
-			event_type,
-		}
+		Event { contract_account_id, block_num, event_index, extrinsic_index, event_type }
 	}
 }
 
 #[derive(Error, Debug)]
 pub enum DbError {
-	#[error("Too large result")]
-	TooLargeResult,
 	#[error("Database error: {0}")]
 	DatabaseError(#[from] rusqlite::Error),
 	#[error("Inconsistent block number")]
@@ -184,7 +185,6 @@ pub fn get_bounds_with_conn(conn: &Connection) -> SqliteResult<(u32, u32)> {
 	})
 }
 
-
 pub fn init_db(block_num: u32) -> SqliteResult<()> {
 	let mut conn = Connection::open(Path::new(DATABASE_FILE))?;
 	conn.pragma_update(None, "journal_mode", "WAL")?;
@@ -207,9 +207,9 @@ pub fn init_db(block_num: u32) -> SqliteResult<()> {
 
 	tx.execute("CREATE INDEX IF NOT EXISTS idx_block_num ON events (block_num)", [])?;
 	tx.execute(
-        "CREATE INDEX IF NOT EXISTS idx_contract_account_id ON events (contract_account_id)",
-        [],
-    )?;
+		"CREATE INDEX IF NOT EXISTS idx_contract_account_id ON events (contract_account_id)",
+		[],
+	)?;
 	tx.execute(
         "CREATE INDEX IF NOT EXISTS idx_contract_block_num ON events (contract_account_id, block_num)",
         [],
@@ -298,7 +298,7 @@ pub fn get_events_by_contract(
 	block_stop: u32,
 	contract_address: &AccountId,
 	conn: &Connection,
-) -> Result<Vec<Event>, DbError> {
+) -> Result<QueryResult<Vec<Event>>, DbError> {
 	let (indexed_from, indexed_to) = get_bounds_with_conn(&conn)?;
 	if !(block_start >= indexed_from && block_stop <= indexed_to) {
 		return Err(DbError::BlocksNotInRange(indexed_from, indexed_to, block_start, block_stop));
@@ -320,14 +320,14 @@ pub fn get_events_by_contract(
 	let mut total_size = 0;
 	while let Some(row) = rows.next()? {
 		if total_size > MAX_TOTAL_RESULT_SIZE {
-			return Err(DbError::TooLargeResult);
+			return Ok(QueryResult { data: events, is_complete: false });
 		}
 		let event = event_from_row(&row)?;
 		total_size += event.size();
 		events.push(event);
 	}
 
-	Ok(events)
+	return Ok(QueryResult { data: events, is_complete: true });
 }
 
 fn event_from_row(row: &rusqlite::Row) -> rusqlite::Result<Event> {
@@ -340,25 +340,23 @@ fn event_from_row(row: &rusqlite::Row) -> rusqlite::Result<Event> {
 	let caller: Option<[u8; 32]> = row.get(5)?;
 	let data: Vec<u8> = row.get(6)?;
 
-	Ok(
-		DBEvent {
-			contract_account_id,
-			block_num,
-			event_index,
-			extrinsic_index,
-			event_type,
-			caller,
-			data,
-		}
-		.into(),
-	)
+	Ok(DBEvent {
+		contract_account_id,
+		block_num,
+		event_index,
+		extrinsic_index,
+		event_type,
+		caller,
+		data,
+	}
+	.into())
 }
 
 pub fn get_events_by_range(
 	block_start: u32,
 	block_stop: u32,
 	conn: &Connection,
-) -> Result<Vec<Event>, DbError> {
+) -> Result<QueryResult<Vec<Event>>, DbError> {
 	let (indexed_from, indexed_to) = get_bounds_with_conn(&conn)?;
 	if !(block_start >= indexed_from && block_stop <= indexed_to) {
 		return Err(DbError::BlocksNotInRange(indexed_from, indexed_to, block_start, block_stop));
@@ -377,12 +375,12 @@ pub fn get_events_by_range(
 	let mut total_size = 0;
 	while let Some(row) = rows.next()? {
 		if total_size > MAX_TOTAL_RESULT_SIZE {
-			return Err(DbError::TooLargeResult);
+			return Ok(QueryResult { data: events, is_complete: false });
 		}
 		let event = event_from_row(&row)?;
 		total_size += event.size();
 		events.push(event);
 	}
 
-	Ok(events)
+	Ok(QueryResult { data: events, is_complete: true })
 }

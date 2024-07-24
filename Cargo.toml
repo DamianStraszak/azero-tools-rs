@@ -7,6 +7,7 @@ members = [
     "azero_universal",
     "azero_contracts",
     "common_indexer",
+    "price_feed",
 ]
 
 resolver = "2"
@@ -44,7 +45,7 @@ hex = "0.4.3"
 serde = { version = "1.0.188", features = ["serde_derive"] }
 serde_json = "1.0.107"
 thiserror = "1.0.48"
-primitive-types = "0.12.2"
+primitive-types = { version = "0.12.2" }
 sp-core-hashing = "9.0.0"
 
 azero_config = { path = "azero_config" }
@@ -53,14 +54,16 @@ azero_universal = { path = "azero_universal" }
 azero_contracts = { path = "azero_contracts" }
 azero_contract_event_indexer = { path = "azero_contract_event_indexer" }
 common_indexer = { path = "common_indexer" }
+price_feed = { path = "price_feed" }
 
 
 anyhow = "1.0.75"
 parking_lot = "0.12.1"
 log = "0.4.20"
 rand = "0.8.5"
-env_logger = "0.10.0"
+env_logger = "0.11.3"
 subxt-signer = "0.31.0"
 tokio-stream = "0.1.14"
 num-traits = "0.2.17"
 chrono = "0.4.0"
+reqwest = { version = "0.12.5", features=["json"] } 
