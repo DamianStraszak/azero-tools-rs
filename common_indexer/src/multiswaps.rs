@@ -1,7 +1,6 @@
 use std::collections::BTreeMap;
 
 use crate::{event_db::Trade, AccountId, QueryResult, U128AsDecString};
-use primitive_types::U128;
 use serde::Serialize;
 use serde_with::serde_as;
 
@@ -13,9 +12,9 @@ pub struct MultiSwap {
 	pub token_out: AccountId,
 	pub path: Vec<AccountId>,
 	#[serde_as(as = "U128AsDecString")]
-	pub amount_in: U128,
+	pub amount_in: u128,
 	#[serde_as(as = "U128AsDecString")]
-	pub amount_out: U128,
+	pub amount_out: u128,
 	pub block_num: u32,
 	pub extrinsic_index: u32,
 }

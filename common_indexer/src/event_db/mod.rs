@@ -1,6 +1,5 @@
 use crate::{tokens::Token, AccountId, QueryResult, U128AsDecString, COMMON_START_BLOCK};
 use parking_lot::Mutex;
-use primitive_types::U128;
 use r2d2::Pool as DBPool;
 use r2d2_sqlite::SqliteConnectionManager;
 use rusqlite::{params, Connection, Result as SqliteResult};
@@ -9,15 +8,15 @@ use serde_with::serde_as;
 use std::{path::Path, str::FromStr, sync::Arc};
 use thiserror::Error;
 pub const DATABASE_FILE: &str = "db/common_events.db";
-const MAX_TOTAL_RESULT_SIZE: usize = 256000;
+const MAX_TOTAL_RESULT_SIZE: usize = 2256000;
 
 #[derive(Debug, Clone)]
 pub struct Trade {
 	pub pool: AccountId,
 	pub token_in: AccountId,
 	pub token_out: AccountId,
-	pub amount_in: U128,
-	pub amount_out: U128,
+	pub amount_in: u128,
+	pub amount_out: u128,
 	pub block_num: u32,
 	pub event_index: u32,
 	pub extrinsic_index: u32,
@@ -39,9 +38,9 @@ pub struct Pool {
 	pub token_0: AccountId,
 	pub token_1: AccountId,
 	#[serde_as(as = "U128AsDecString")]
-	pub reserve_0: U128,
+	pub reserve_0: u128,
 	#[serde_as(as = "U128AsDecString")]
-	pub reserve_1: U128,
+	pub reserve_1: u128,
 	pub fee: u8,
 }
 
@@ -178,13 +177,13 @@ fn pool_from_row(row: &rusqlite::Row) -> rusqlite::Result<Pool> {
 		let token_1: String = row.get(2)?;
 		AccountId::from_str(&token_1).unwrap()
 	};
-	let reserve_0: U128 = {
+	let reserve_0: u128 = {
 		let reserve_0: String = row.get(3)?;
-		U128::from_str(&reserve_0).unwrap()
+		reserve_0.parse().unwrap()
 	};
-	let reserve_1: U128 = {
+	let reserve_1: u128 = {
 		let reserve_1: String = row.get(4)?;
-		U128::from_str(&reserve_1).unwrap()
+		reserve_1.parse().unwrap()
 	};
 	let fee: u8 = row.get(5)?;
 
@@ -345,11 +344,11 @@ fn trade_from_row(row: &rusqlite::Row) -> rusqlite::Result<Trade> {
 		let token_out: String = row.get(2)?;
 		AccountId::from_str(&token_out).unwrap()
 	};
-	let amount_in: U128 = {
+	let amount_in: u128 = {
 		let amount_in: String = row.get(3)?;
 		amount_in.parse().unwrap()
 	};
-	let amount_out: U128 = {
+	let amount_out: u128 = {
 		let amount_out: String = row.get(4)?;
 		amount_out.parse().unwrap()
 	};

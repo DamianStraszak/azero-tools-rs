@@ -67,3 +67,7 @@ tokio-stream = "0.1.14"
 num-traits = "0.2.17"
 chrono = "0.4.0"
 reqwest = { version = "0.12.5", features=["json"] } 
+r2d2 = "0.8.10"
+r2d2_sqlite = "0.25.0"
+rusqlite = "0.32.0"
+

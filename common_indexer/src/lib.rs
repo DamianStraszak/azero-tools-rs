@@ -1,4 +1,3 @@
-use primitive_types::U128;
 use serde::{Deserialize, Serialize};
 use serde_with::SerializeAs;
 
@@ -23,12 +22,11 @@ pub struct QueryResult<T> {
 
 pub struct U128AsDecString;
 
-impl SerializeAs<U128> for U128AsDecString {
-	fn serialize_as<S>(value: &U128, serializer: S) -> Result<S::Ok, S::Error>
+impl SerializeAs<u128> for U128AsDecString {
+	fn serialize_as<S>(value: &u128, serializer: S) -> Result<S::Ok, S::Error>
 	where
 		S: serde::Serializer,
 	{
-		let val = value.as_u128();
-		val.to_string().serialize(serializer)
+		value.to_string().serialize(serializer)
 	}
 }

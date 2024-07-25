@@ -31,8 +31,8 @@ azero_contracts = { workspace = true }
 
 axum = "0.7.4"
 tower-http = { version = "0.5.2", features = ["fs"] }
-rusqlite = "0.31.0"
+rusqlite = { workspace = true }
 serde_with = { version =  "3.8.1", features = ["hex"] }
-r2d2 = "0.8.10"
-r2d2_sqlite = "0.24.0"
+r2d2 = { workspace = true }
+r2d2_sqlite = { workspace = true }
 

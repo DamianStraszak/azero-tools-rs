@@ -24,6 +24,9 @@ env_logger = { workspace = true }
 primitive-types = { workspace = true }
 reqwest = { workspace = true }
 chrono ={ workspace = true }
+r2d2 = { workspace = true }
+r2d2_sqlite = { workspace = true }
+rusqlite = { workspace = true }
 
 azero_config = { workspace = true }
 azero_runtime_types = { workspace = true }
@@ -34,9 +37,7 @@ price_feed = { workspace = true }
 
 
 axum = "0.7.4"
-tower-http = { version = "0.5.2", features = ["fs"] }
-rusqlite = "0.31.0"
+tower-http = { version = "0.5.2", features = ["fs", "cors"] }
 serde_with = { version =  "3.8.1", features = ["hex"] }
-r2d2 = "0.8.10"
-r2d2_sqlite = "0.24.0"
 
+tower = { version = "0.4" }

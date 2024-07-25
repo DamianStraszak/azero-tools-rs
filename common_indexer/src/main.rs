@@ -13,6 +13,7 @@ use env_logger::{Builder, Target};
 use price_feed::PriceFeed;
 use serde::{Deserialize, Serialize};
 use std::io::Write;
+use tower_http::cors::CorsLayer;
 
 #[derive(Clone)]
 struct AppState{
@@ -141,10 +142,16 @@ async fn main() {
 		})
 		.init();
 
+	let port = std::env::var("PORT").unwrap_or_else(|_| "3001".to_string());
+	let rpc_azero = std::env::var("RPC_AZERO").unwrap_or_else(|_| WS_AZERO_MAINNET.to_string());
+	let indexer_url = std::env::var("INDEXER_URL").unwrap_or_else(|_| "http://localhost:3000".to_string());
+
+	log::info!("Running config: port: {}, rpc_azero: {}, indexer_url: {}", port, rpc_azero, indexer_url);
+
 	init_db().unwrap();
 	tokio::spawn(async {
 		let endpoints =
-			Endpoints::new(WS_AZERO_MAINNET.to_string(), "http://localhost:3000".to_string());
+			Endpoints::new(rpc_azero, indexer_url);
 		scraper::run(&endpoints).await;
 	});
 
@@ -180,10 +187,12 @@ async fn main() {
 				let state = app_state.clone();
 				move || handle_get_tokens(state)
 			}),
-		);
+		)
+		.layer(CorsLayer::permissive());
 
-	let addr = "0.0.0.0:3001";
-	let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
+	//0.0.0.0:port
+	let addr = format!("0.0.0.0:{}", port);
+	let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
 	println!("Server running at {}", addr);
 	axum::serve(listener, app.into_make_service()).await.unwrap();
 }

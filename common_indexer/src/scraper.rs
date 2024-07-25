@@ -226,7 +226,7 @@ async fn run_iter(
 	let block = client.blocks().at_latest().await?;
 	let block_num = block.header().number;
 	let fetched_till = get_indexed_till(conn)?;
-	let target_num = u32::min(fetched_till + 200000, block_num - 20);
+	let target_num = u32::min(fetched_till + 50000, block_num - 20);
 	if target_num <= fetched_till {
 		return Ok(None);
 	}
