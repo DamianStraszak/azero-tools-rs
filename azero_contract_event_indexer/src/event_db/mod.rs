@@ -4,16 +4,17 @@ use serde::{Deserialize, Serialize};
 use serde_with::{hex::Hex, serde_as};
 use std::path::Path;
 use thiserror::Error;
+use utoipa::ToSchema;
 pub const DATABASE_FILE: &str = "db/mainnet_events.db";
 const MAX_TOTAL_RESULT_SIZE: usize = 1256000;
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
 pub enum EventType {
 	Emitted(EmittedDetails),
 	Called(CalledDetails),
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
 pub struct Event {
 	pub contract_account_id: AccountId,
 	pub block_num: u32,
@@ -65,13 +66,13 @@ impl Event {
 }
 
 #[serde_as]
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
 pub struct EmittedDetails {
 	#[serde_as(as = "Hex")]
 	pub data: Vec<u8>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
 pub struct CalledDetails {
 	pub caller: AccountId,
 }
@@ -147,7 +148,7 @@ pub fn get_bounds() -> SqliteResult<(u32, u32)> {
 	let conn = {
 		let c = Connection::open(Path::new(DATABASE_FILE));
 		if let Err(e) = &c {
-			println!("Error opening connection in get_bounds: {:?}", e);
+			log::info!("Error opening connection in get_bounds: {:?}", e);
 		}
 		c?
 	};
@@ -157,7 +158,7 @@ pub fn get_bounds() -> SqliteResult<(u32, u32)> {
 pub fn get_connection() -> SqliteResult<Connection> {
 	let conn = Connection::open(Path::new(DATABASE_FILE));
 	if let Err(e) = &conn {
-		println!("Error opening connection in get_connection: {:?}", e);
+		log::info!("Error opening connection in get_connection: {:?}", e);
 	}
 	conn
 }
@@ -168,7 +169,7 @@ pub fn get_connection_with_backoff() -> Connection {
 		match get_connection() {
 			Ok(conn) => return conn,
 			Err(e) => {
-				println!("Error getting connection: {:?}", e);
+				log::info!("Error getting connection: {:?}", e);
 				std::thread::sleep(std::time::Duration::from_secs_f64(sleep_secs));
 				sleep_secs *= 2.0;
 			},
@@ -245,7 +246,7 @@ pub fn insert_events_for_block(events: Vec<Event>, block_num: u32) -> Result<(),
 	let (indexed_from, indexed_to) = {
 		let maybe_bounds = get_bounds_with_conn(&conn);
 		if let Err(e) = &maybe_bounds {
-			println!("Error getting bounds in insert: {:?}", e);
+			log::info!("Error getting bounds in insert: {:?}", e);
 		}
 		maybe_bounds?
 	};

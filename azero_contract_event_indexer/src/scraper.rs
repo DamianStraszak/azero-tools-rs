@@ -23,10 +23,13 @@ struct SolvedRange {
 	result: BlockRangeResult,
 }
 
+// KInd of arbitrary choice for Aleph Zero mainnet. It contains all of Common and much more actually (events since December 2023).
+const FIRST_BLOCK_OF_INTEREST: u32 = 65000000;
+
 const MAX_SOLVED: usize = 100;
-const NUM_PENDING_LEFT: usize = 25;
-const NUM_PENDING_RIGHT: usize = 5;
-const RANGE_SIZE: u32 = 12;
+const NUM_PENDING_LEFT: usize = 17;
+const NUM_PENDING_RIGHT: usize = 13;
+const RANGE_SIZE: u32 = 6;
 
 pub async fn get_hash_from_number(
 	client: &RpcClient,
@@ -197,7 +200,7 @@ fn schedule_left(
 
 pub async fn scrape() -> ! {
 	let (mut indexed_from, mut indexed_to) = event_db::get_bounds().unwrap();
-	println!("Indexed from: {}, to: {}", indexed_from, indexed_to);
+	log::info!("Indexed from: {}, to: {}", indexed_from, indexed_to);
 	let mut prev_checkpoint = Instant::now();
 	let mut prev_len = indexed_to + 1 - indexed_from;
 	let mut pending: Vec<PendingRange> = Vec::new();
@@ -209,7 +212,7 @@ pub async fn scrape() -> ! {
 		let len = indexed_to + 1 - indexed_from;
 		if elapsed > 15.0 {
 			let rate = (len - prev_len) as f64 / elapsed;
-			println!("Indexed from: {}, to: {}, rate: {:.3}/s", indexed_from, indexed_to, rate);
+			log::info!("Indexed from: {}, to: {}, rate: {:.3}/s", indexed_from, indexed_to, rate);
 			prev_checkpoint = checkpoint;
 			prev_len = len;
 			finalized_num = match get_finalized_block_num().await {
@@ -220,7 +223,7 @@ pub async fn scrape() -> ! {
 					continue;
 				},
 			};
-			println!("Finalized: {}", finalized_num);
+			log::info!("Finalized: {}", finalized_num);
 		}
 
 		loop {
@@ -256,7 +259,7 @@ pub async fn scrape() -> ! {
 					let segments_left: Vec<(u32, u32)> =
 						all_intervals.filter(|(_a, b)| *b < indexed_from).collect();
 					if num_pending_left < NUM_PENDING_LEFT && solved.len() < MAX_SOLVED {
-						if let Some((a, b)) = schedule_left(indexed_from, 0, &segments_left) {
+						if let Some((a, b)) = schedule_left(indexed_from, FIRST_BLOCK_OF_INTEREST, &segments_left) {
 							let (tx, rx) = oneshot::channel();
 							pending.push(PendingRange { num_from: a, num_to: b, result: rx });
 							tokio::spawn(scrape_blocks(a, b, tx));
@@ -288,7 +291,7 @@ pub async fn scrape() -> ! {
 				solved[*i].num_from == indexed_to + 1 || solved[*i].num_to + 1 == indexed_from
 			});
 			if let Some(i) = ind {
-				//println!("Len pending {}, len solved {}", pending.len(), solved.len());
+				//log::info!("Len pending {}, len solved {}", pending.len(), solved.len());
 				let s = solved.swap_remove(i);
 				let to_process = if s.num_from > indexed_to {
 					s.result.res
@@ -298,8 +301,8 @@ pub async fn scrape() -> ! {
 					res
 				};
 				for (num, events) in to_process {
-					//println!("indexed_from {}, indexed_to {}, num {}", indexed_from, indexed_to,
-					// num);
+					//log::info!("indexed_from {}, indexed_to {}, num {}", indexed_from,
+					// indexed_to, num);
 					event_db::insert_events_for_block(events, num).unwrap();
 					if num > indexed_to {
 						assert!(num == indexed_to + 1);

@@ -1,18 +1,21 @@
 use std::collections::BTreeMap;
 
-use crate::{event_db::Trade, AccountId, QueryResult, U128AsDecString};
+use crate::{event_db::Trade, u128_dec, AccountId, QueryResult, U128AsDecString};
 use serde::Serialize;
 use serde_with::serde_as;
+use utoipa::ToSchema;
 
 #[serde_as]
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, ToSchema)]
 pub struct MultiSwap {
 	pub origin: AccountId,
 	pub token_in: AccountId,
 	pub token_out: AccountId,
 	pub path: Vec<AccountId>,
+	#[schema(schema_with = u128_dec)]
 	#[serde_as(as = "U128AsDecString")]
 	pub amount_in: u128,
+	#[schema(schema_with = u128_dec)]
 	#[serde_as(as = "U128AsDecString")]
 	pub amount_out: u128,
 	pub block_num: u32,

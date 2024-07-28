@@ -57,6 +57,9 @@ common_indexer = { path = "common_indexer" }
 price_feed = { path = "price_feed" }
 
 
+utoipa = {version = "4.2.3", features = ["axum_extras"]}
+utoipa-swagger-ui = {version = "7.1.0", features = ["axum"]}
+axum = "0.7.4"
 anyhow = "1.0.75"
 parking_lot = "0.12.1"
 log = "0.4.20"

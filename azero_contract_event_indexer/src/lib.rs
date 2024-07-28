@@ -1,5 +1,7 @@
 use azero_config::BlockHeader;
+use event_db::Event;
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 pub type Client = azero_config::Client;
 pub type RpcClient = azero_config::RpcClient;
@@ -13,6 +15,18 @@ pub mod scraper;
 pub struct QueryResult<T> {
 	pub data: T,
 	pub is_complete: bool,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, ToSchema)]
+pub struct QueryResultEvents {
+	pub data: Vec<Event>,
+	pub is_complete: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
+pub struct Bounds {
+	pub min_block: u32,
+	pub max_block: u32,
 }
 
 //const ENDPOINTS : [&str; 3] = ["wss://aleph-zero-rpc.dwellir.com",

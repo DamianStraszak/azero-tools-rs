@@ -13,6 +13,8 @@ serde = { workspace = true, features = ["serde_derive"] }
 codec = { workspace = true, default-features = false }
 tokio = { workspace = true }
 
+
+utoipa = {workspace = true, features = ["axum_extras"]}
 anyhow = { workspace = true }
 log = { workspace = true }
 azero_config = { workspace = true }

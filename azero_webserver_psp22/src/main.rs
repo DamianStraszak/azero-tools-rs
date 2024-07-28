@@ -35,7 +35,7 @@ async fn main() {
 		.route("/", get(Redirect::to("/mainnet")));
 	let addr = "127.0.0.1:3000";
 	let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
-	println!("Server running at {}", addr);
+	log::info!("Server running at {}", addr);
 	axum::serve(listener, app.into_make_service()).await.unwrap();
 }
 

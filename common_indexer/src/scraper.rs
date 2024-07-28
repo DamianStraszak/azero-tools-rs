@@ -1,11 +1,17 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-use azero_contract_event_indexer::event_db::{CalledDetails, EmittedDetails, Event, EventType};
+use azero_contract_event_indexer::{
+	event_db::{CalledDetails, EmittedDetails, Event, EventType},
+	Bounds,
+};
 use azero_universal::{get_hash_from_number, initialize_client};
 use serde::Deserialize;
 
 use crate::{
-	event_db::{get_connection_with_backoff, get_indexed_till, insert_trades, Pool, Trade}, pools::{get_pools, Pair, PairEvent}, tokens::{get_token_info, Token}, AccountId, RpcClient
+	event_db::{get_connection_with_backoff, get_indexed_till, insert_trades, Pool, Trade},
+	pools::{get_pools, Pair, PairEvent},
+	tokens::{get_token_info, Token},
+	AccountId, RpcClient,
 };
 
 use super::event_db;
@@ -34,7 +40,8 @@ pub async fn run(endpoints: &Endpoints) -> ! {
 					state.processed_in_iter,
 					state.to_be_processed
 				);
-				pool_hint = Some((state.state_fetched_at , state.pools.clone(), state.tokens.clone()));
+				pool_hint =
+					Some((state.state_fetched_at, state.pools.clone(), state.tokens.clone()));
 			},
 			Ok(None) => {},
 			Err(e) => log::error!("Error in scraper: {:?}", e),
@@ -51,17 +58,20 @@ struct State {
 	tokens: Vec<Token>,
 }
 
-async fn get_pools_and_tokens_at_num(rpc_client: &RpcClient, num: u32) -> anyhow::Result<(Vec<Pair>, Vec<Token>)> {
+async fn get_pools_and_tokens_at_num(
+	rpc_client: &RpcClient,
+	num: u32,
+) -> anyhow::Result<(Vec<Pair>, Vec<Token>)> {
 	let block_hash = match get_hash_from_number(rpc_client, num).await? {
 		Some(hash) => hash,
 		None => anyhow::bail!("Block {} not found", num),
 	};
 	let pools = get_pools(rpc_client, Some(block_hash)).await?;
 	let tokens = pools
-			.iter()
-			.map(|pool| pool.tokens.clone())
-			.flatten()
-			.collect::<BTreeSet<AccountId>>();
+		.iter()
+		.map(|pool| pool.tokens.clone())
+		.flatten()
+		.collect::<BTreeSet<AccountId>>();
 	let token_info = get_token_info(&rpc_client, tokens.iter().cloned().collect()).await?;
 	let tokens = token_info.tokens();
 	Ok((pools, tokens))
@@ -71,6 +81,18 @@ async fn get_pools_and_tokens_at_num(rpc_client: &RpcClient, num: u32) -> anyhow
 struct GetEventsResponse {
 	data: Vec<Event>,
 	is_complete: bool,
+}
+
+async fn get_bounds(base_url: &str) -> anyhow::Result<Bounds> {
+	let client = reqwest::Client::new();
+	let url = format!("{}/status", base_url);
+	let response = client.get(&url).send().await?;
+	if response.status().is_success() {
+		let response: Bounds = response.json().await?;
+		Ok(response)
+	} else {
+		Err(anyhow::anyhow!("Error fetching status: {:?}", response.status()))
+	}
 }
 
 async fn get_events_by_range(
@@ -217,6 +239,11 @@ async fn fetch_trades_from_indexer(
 	Ok(trades)
 }
 
+async fn fetch_range_from_indexer(endpoints: &Endpoints) -> anyhow::Result<Bounds> {
+	let endpoint = endpoints.event_indexer.clone();
+	get_bounds(&endpoint).await
+}
+
 async fn run_iter(
 	conn: &mut Connection,
 	endpoints: &Endpoints,
@@ -227,6 +254,8 @@ async fn run_iter(
 	let block_num = block.header().number;
 	let fetched_till = get_indexed_till(conn)?;
 	let target_num = u32::min(fetched_till + 50000, block_num - 20);
+	let bounds = fetch_range_from_indexer(endpoints).await?;
+	let target_num = u32::min(target_num, bounds.max_block);
 	if target_num <= fetched_till {
 		return Ok(None);
 	}
@@ -236,7 +265,8 @@ async fn run_iter(
 				if *hint_at >= target_num {
 					(*hint_at, hint_pools.clone(), hint_tokens.clone())
 				} else {
-					let (pools, tokens) = get_pools_and_tokens_at_num(&rpc_client, target_num).await?;
+					let (pools, tokens) =
+						get_pools_and_tokens_at_num(&rpc_client, target_num).await?;
 					(target_num, pools, tokens)
 				},
 			None => {
@@ -251,7 +281,7 @@ async fn run_iter(
 	let tokens_db = event_db::get_tokens(conn)?;
 	let tokens_map: BTreeMap<AccountId, Token> =
 		tokens_db.into_iter().map(|token| (token.address.clone(), token)).collect();
-	
+
 	for pair in pools.clone() {
 		if !pools_map.contains_key(&pair.address) {
 			let pool = Pool {
@@ -270,7 +300,6 @@ async fn run_iter(
 		if !tokens_map.contains_key(&token.address) {
 			event_db::insert_token(conn, &token)?
 		}
-	
 	}
 
 	let trades =

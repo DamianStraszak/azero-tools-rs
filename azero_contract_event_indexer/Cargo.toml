@@ -27,9 +27,12 @@ azero_config = { workspace = true }
 azero_runtime_types = { workspace = true }
 azero_universal = { workspace = true }
 azero_contracts = { workspace = true }
+chrono = { workspace = true }
 
 
-axum = "0.7.4"
+axum = {workspace = true}
+utoipa = {workspace = true}
+utoipa-swagger-ui = {workspace = true}
 tower-http = { version = "0.5.2", features = ["fs"] }
 rusqlite = { workspace = true }
 serde_with = { version =  "3.8.1", features = ["hex"] }

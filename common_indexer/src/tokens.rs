@@ -42,7 +42,13 @@ impl TokenInfo {
 		TokenInfo { tokens: BTreeMap::new() }
 	}
 
-	pub fn add_token(&mut self, address: AccountId, symbol: Option<String>, name: Option<String>, decimals: u8) {
+	pub fn add_token(
+		&mut self,
+		address: AccountId,
+		symbol: Option<String>,
+		name: Option<String>,
+		decimals: u8,
+	) {
 		self.tokens.insert(address.clone(), Token { symbol, name, decimals, address });
 	}
 
@@ -70,11 +76,11 @@ pub async fn get_token_info(
 				Ok(Some(symbol)) => Some(symbol),
 				_ => None,
 			};
-        let name = 
-            match azero_contracts::psp22::read::read_name(rpc_client, &address, None).await? {
-                Ok(Some(name)) => Some(name),
-                _ => None,
-            };
+		let name = match azero_contracts::psp22::read::read_name(rpc_client, &address, None).await?
+		{
+			Ok(Some(name)) => Some(name),
+			_ => None,
+		};
 		let decimals =
 			match azero_contracts::psp22::read::read_decimals(rpc_client, &address, None).await? {
 				Ok(decimals) => decimals,
@@ -122,7 +128,5 @@ fn address_to_canonical_symbol(address: &AccountId) -> Option<String> {
 }
 
 pub fn get_price_by_token_address(token: &AccountId, price_feed: &PriceFeed) -> Option<f64> {
-    address_to_canonical_symbol(token)
-        .map(|s| price_feed.get_price(&s))
-        .flatten()
+	address_to_canonical_symbol(token).map(|s| price_feed.get_price(&s)).flatten()
 }

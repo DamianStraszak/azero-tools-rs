@@ -1,4 +1,4 @@
-use crate::{tokens::Token, AccountId, QueryResult, U128AsDecString, COMMON_START_BLOCK};
+use crate::{tokens::Token, u128_dec, AccountId, QueryResult, U128AsDecString, COMMON_START_BLOCK};
 use parking_lot::Mutex;
 use r2d2::Pool as DBPool;
 use r2d2_sqlite::SqliteConnectionManager;
@@ -7,6 +7,7 @@ use serde::Serialize;
 use serde_with::serde_as;
 use std::{path::Path, str::FromStr, sync::Arc};
 use thiserror::Error;
+use utoipa::ToSchema;
 pub const DATABASE_FILE: &str = "db/common_events.db";
 const MAX_TOTAL_RESULT_SIZE: usize = 2256000;
 
@@ -29,16 +30,16 @@ impl Trade {
 	}
 }
 
-
-
 #[serde_as]
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, ToSchema)]
 pub struct Pool {
 	pub pool: AccountId,
 	pub token_0: AccountId,
 	pub token_1: AccountId,
+	#[schema(schema_with = u128_dec)]
 	#[serde_as(as = "U128AsDecString")]
 	pub reserve_0: u128,
+	#[schema(schema_with = u128_dec)]
 	#[serde_as(as = "U128AsDecString")]
 	pub reserve_1: u128,
 	pub fee: u8,
@@ -373,11 +374,15 @@ fn trade_from_row(row: &rusqlite::Row) -> rusqlite::Result<Trade> {
 	})
 }
 
-fn trades_from_rows(rows: &mut rusqlite::Rows) -> Result<QueryResult<Vec<Trade>>, DbError> {
+fn trades_from_rows(
+	rows: &mut rusqlite::Rows,
+	limit: Option<usize>,
+) -> Result<QueryResult<Vec<Trade>>, DbError> {
 	let mut trades = Vec::new();
 	let mut total_size = 0;
+	let limit = limit.unwrap_or(usize::MAX);
 	while let Some(row) = rows.next()? {
-		if total_size > MAX_TOTAL_RESULT_SIZE {
+		if total_size > limit {
 			return Ok(QueryResult { data: trades, is_complete: false });
 		}
 		let trade = trade_from_row(&row)?;
@@ -387,11 +392,27 @@ fn trades_from_rows(rows: &mut rusqlite::Rows) -> Result<QueryResult<Vec<Trade>>
 	Ok(QueryResult { data: trades, is_complete: true })
 }
 
-pub fn get_trades_by_origin(
+pub fn get_trades_by_origin_limited(
 	conn: &Connection,
 	block_start: u32,
 	block_stop: u32,
 	origin: &AccountId,
+) -> Result<QueryResult<Vec<Trade>>, DbError> {
+	get_trades_by_origin_with_limit(
+		conn,
+		block_start,
+		block_stop,
+		origin,
+		Some(MAX_TOTAL_RESULT_SIZE),
+	)
+}
+
+pub fn get_trades_by_origin_with_limit(
+	conn: &Connection,
+	block_start: u32,
+	block_stop: u32,
+	origin: &AccountId,
+	limit: Option<usize>,
 ) -> Result<QueryResult<Vec<Trade>>, DbError> {
 	let mut stmt = conn.prepare(
 		"SELECT pool, token_in, token_out, amount_in, amount_out, block_num, event_index, extrinsic_index, origin
@@ -401,13 +422,22 @@ pub fn get_trades_by_origin(
          ORDER BY block_num ASC, event_index ASC",
 	)?;
 	let mut rows = stmt.query(params![block_start, block_stop, origin.to_string()])?;
-	trades_from_rows(&mut rows)
+	trades_from_rows(&mut rows, limit)
 }
 
-pub fn get_trades_by_range(
+pub fn get_trades_by_range_limited(
 	conn: &Connection,
 	block_start: u32,
 	block_stop: u32,
+) -> Result<QueryResult<Vec<Trade>>, DbError> {
+	get_trades_by_range_with_limit(conn, block_start, block_stop, Some(MAX_TOTAL_RESULT_SIZE))
+}
+
+pub fn get_trades_by_range_with_limit(
+	conn: &Connection,
+	block_start: u32,
+	block_stop: u32,
+	limit: Option<usize>,
 ) -> Result<QueryResult<Vec<Trade>>, DbError> {
 	let mut stmt = conn.prepare(
 		"SELECT pool, token_in, token_out, amount_in, amount_out, block_num, event_index, extrinsic_index, origin
@@ -415,7 +445,6 @@ pub fn get_trades_by_range(
 		 WHERE block_num BETWEEN ?1 AND ?2 
 		 ORDER BY block_num ASC, event_index ASC",
 	)?;
-
 	let mut rows = stmt.query(params![block_start, block_stop])?;
-	trades_from_rows(&mut rows)
+	trades_from_rows(&mut rows, limit)
 }

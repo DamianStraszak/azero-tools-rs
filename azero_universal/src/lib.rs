@@ -22,14 +22,28 @@ pub async fn initialize_client(url: &str) -> (RpcClient, Client) {
 					return (rpc_client, client);
 				},
 				Err(e) => {
-					println!("Error {} initializing client at {}", e, url);
+					log::info!("Error {} initializing client at {}", e, url);
 					tokio::time::sleep(std::time::Duration::from_secs(2)).await;
 				},
 			},
 			Err(e) => {
-				println!("Error {} initializing client at {}", e, url);
+				log::info!("Error {} initializing client at {}", e, url);
 				tokio::time::sleep(std::time::Duration::from_secs(2)).await;
 			},
 		}
+	}
+}
+
+pub struct AccountIdSchema;
+
+impl<'s> utoipa::ToSchema<'s> for AccountIdSchema {
+	fn schema() -> (&'s str, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>) {
+		(
+			"AccountId",
+			utoipa::openapi::ObjectBuilder::new()
+				.example(Some("\"5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY\"".into()))
+				.description(Some("ss58 encoded AccountId"))
+				.into(),
+		)
 	}
 }
