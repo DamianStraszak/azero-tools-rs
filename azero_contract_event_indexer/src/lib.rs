@@ -1,4 +1,7 @@
 use azero_config::BlockHeader;
+use event_db::Event;
+use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 pub type Client = azero_config::Client;
 pub type RpcClient = azero_config::RpcClient;
@@ -8,8 +11,27 @@ pub type AccountId = azero_config::AccountId;
 pub mod event_db;
 pub mod scraper;
 
-//const ENDPOINTS : [&str; 3] = ["wss://aleph-zero-rpc.dwellir.com", "wss://aleph-zero.api.onfinality.io/public-ws", "wss://ws.azero.dev"];
-const ENDPOINTS: [&str; 1] = ["wss://ws.azero.dev"]; //"wss://ws.azero.dev", , 
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct QueryResult<T> {
+	pub data: T,
+	pub is_complete: bool,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, ToSchema)]
+pub struct QueryResultEvents {
+	pub data: Vec<Event>,
+	pub is_complete: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
+pub struct Bounds {
+	pub min_block: u32,
+	pub max_block: u32,
+}
+
+//const ENDPOINTS : [&str; 3] = ["wss://aleph-zero-rpc.dwellir.com",
+// "wss://aleph-zero.api.onfinality.io/public-ws", "wss://ws.azero.dev"];
+const ENDPOINTS: [&str; 1] = ["wss://ws.azero.dev"]; //"wss://ws.azero.dev", ,
 
 pub fn random_endpoint() -> &'static str {
 	let index = rand::random::<usize>() % ENDPOINTS.len();

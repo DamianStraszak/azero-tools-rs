@@ -1,5 +1,5 @@
 [package]
-name = "azero_contract_event_indexer"
+name = "common_indexer"
 version = "0.1.0"
 edition = "2021"
 
@@ -21,21 +21,25 @@ parking_lot = { workspace = true }
 log = { workspace = true }
 rand = { workspace = true }
 env_logger = { workspace = true }
-
+primitive-types = { workspace = true }
+reqwest = { workspace = true }
+chrono ={ workspace = true }
+r2d2 = { workspace = true }
+r2d2_sqlite = { workspace = true }
+rusqlite = { workspace = true }
 
 azero_config = { workspace = true }
 azero_runtime_types = { workspace = true }
 azero_universal = { workspace = true }
 azero_contracts = { workspace = true }
-chrono = { workspace = true }
+azero_contract_event_indexer = { workspace = true }
+price_feed = { workspace = true }
 
 
-axum = {workspace = true}
-utoipa = {workspace = true}
-utoipa-swagger-ui = {workspace = true}
-tower-http = { version = "0.5.2", features = ["fs"] }
-rusqlite = { workspace = true }
+axum = { workspace = true }
+utoipa = { workspace = true }
+utoipa-swagger-ui = { workspace = true }
+tower-http = { version = "0.5.2", features = ["fs", "cors"] }
 serde_with = { version =  "3.8.1", features = ["hex"] }
-r2d2 = { workspace = true }
-r2d2_sqlite = { workspace = true }
 
+tower = { version = "0.4" }

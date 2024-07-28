@@ -1,4 +1,4 @@
-use crate::{initialize_client, token_db::ContractKind};
+use crate::token_db::ContractKind;
 use anyhow::Result;
 use azero_config::{Client, RpcClient};
 use azero_contracts::{
@@ -13,6 +13,7 @@ use azero_universal::{
 	contract_info::{
 		backwards_compatible_get_contract_info, backwards_compatible_get_contract_infos,
 	},
+	initialize_client,
 };
 
 use parking_lot::Mutex;
@@ -36,17 +37,17 @@ async fn get_psp22_metadata(
 	api: &RpcClient,
 	address: &AccountId32,
 ) -> Result<Option<PSP22ContractMetadata>> {
-	let decimals = if let Ok(decimals) = read_decimals(api, address).await? {
+	let decimals = if let Ok(decimals) = read_decimals(api, address, None).await? {
 		decimals
 	} else {
 		return Ok(None);
 	};
-	let name = if let Ok(name) = read_name(api, address).await? {
+	let name = if let Ok(name) = read_name(api, address, None).await? {
 		name
 	} else {
 		return Ok(None);
 	};
-	let symbol = if let Ok(symbol) = read_symbol(api, address).await? {
+	let symbol = if let Ok(symbol) = read_symbol(api, address, None).await? {
 		symbol
 	} else {
 		return Ok(None);
@@ -67,7 +68,7 @@ async fn get_contract(
 	let root_hash =
 		get_contract_state_root_from_trie_id(rpc_client, info.trie_id.clone(), None).await?;
 	log::debug!("Getting total_supply for contract {}", address);
-	let total_supply = match read_total_supply(rpc_client, address).await? {
+	let total_supply = match read_total_supply(rpc_client, address, None).await? {
 		Ok(total_supply) => total_supply,
 		Err(e) => {
 			log::debug!("No total suppply for {} {:?}", address, e);
