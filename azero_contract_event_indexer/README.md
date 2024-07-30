@@ -12,7 +12,7 @@ This will run the server at `http://127.0.0.1:3000`.
 ## Example queries
 
 ```
-curl "http://localhost:3000/events_by_range?block_start=84122149&block_stop=84122249"
+curl "http://localhost:3000/events?block_start=84122189&block_stop=84122200" 
 ```
 
 

@@ -2,7 +2,8 @@ use axum::{extract::Query, http::StatusCode, response::IntoResponse, routing::ge
 use azero_config::AccountId;
 use azero_contract_event_indexer::{
 	event_db::{
-		get_bounds_with_conn, get_events_by_contract, get_events_by_range, CalledDetails, DbError, EmittedDetails, Event, EventType, DATABASE_FILE
+		get_bounds_with_conn, get_events_by_contract, get_events_by_range, CalledDetails, DbError,
+		EmittedDetails, Event, EventType, DATABASE_FILE,
 	},
 	start_indexer, Bounds, QueryResultEvents,
 };
@@ -18,7 +19,18 @@ use utoipa::{IntoParams, OpenApi};
 use utoipa_swagger_ui::SwaggerUi;
 
 #[derive(OpenApi)]
-#[openapi(paths(handle_get_status, handle_get_events,), components(schemas(Bounds, AccountIdSchema,QueryResultEvents, Event, EventType, EmittedDetails, CalledDetails)))]
+#[openapi(
+	paths(handle_get_status, handle_get_events,),
+	components(schemas(
+		Bounds,
+		AccountIdSchema,
+		QueryResultEvents,
+		Event,
+		EventType,
+		EmittedDetails,
+		CalledDetails
+	))
+)]
 pub struct UtoipaApi;
 
 type DbPool = Pool<SqliteConnectionManager>;

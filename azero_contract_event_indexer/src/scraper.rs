@@ -23,7 +23,8 @@ struct SolvedRange {
 	result: BlockRangeResult,
 }
 
-// KInd of arbitrary choice for Aleph Zero mainnet. It contains all of Common and much more actually (events since December 2023).
+// KInd of arbitrary choice for Aleph Zero mainnet. It contains all of Common and much more actually
+// (events since December 2023).
 const FIRST_BLOCK_OF_INTEREST: u32 = 65000000;
 
 const MAX_SOLVED: usize = 100;
@@ -259,7 +260,9 @@ pub async fn scrape() -> ! {
 					let segments_left: Vec<(u32, u32)> =
 						all_intervals.filter(|(_a, b)| *b < indexed_from).collect();
 					if num_pending_left < NUM_PENDING_LEFT && solved.len() < MAX_SOLVED {
-						if let Some((a, b)) = schedule_left(indexed_from, FIRST_BLOCK_OF_INTEREST, &segments_left) {
+						if let Some((a, b)) =
+							schedule_left(indexed_from, FIRST_BLOCK_OF_INTEREST, &segments_left)
+						{
 							let (tx, rx) = oneshot::channel();
 							pending.push(PendingRange { num_from: a, num_to: b, result: rx });
 							tokio::spawn(scrape_blocks(a, b, tx));
