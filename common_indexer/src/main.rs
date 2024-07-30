@@ -8,6 +8,7 @@ use common_indexer::{
 		get_trades_by_origin_with_limit, get_trades_by_range_limited, init_db, Pool, SharedPool,
 	},
 	multiswaps::{aggregate_trades, trade_result_to_multiswaps, MultiSwap},
+	psp_list,
 	scraper::Endpoints,
 	tokens::{get_price_by_token_address, Token},
 	QueryResultMultiSwaps, COMMON_START_BLOCK,
@@ -102,77 +103,10 @@ struct GetVolumeParams {
 	account: AccountId,
 }
 
-fn get_last_week_volume(account: &AccountId, app_state: &AppState) -> anyhow::Result<f64> {
-	let conn = {
-		let pool = app_state.db_pool.lock();
-		pool.get().unwrap()
-	};
-	let indexed_till = get_indexed_till(&conn)?;
-	let one_week_ago = indexed_till - 7 * 24 * 60 * 60;
-	let trades =
-		get_trades_by_origin_with_limit(&conn, one_week_ago, indexed_till, account, None)?.data;
-	let tokens = get_tokens(&conn)?;
-	let mut volume = 0.0;
-	let tokens = tokens
-		.into_iter()
-		.map(|token| ((&token.address).clone(), TokenWithPrice::new(token, &app_state.price_feed)))
-		.collect::<BTreeMap<AccountId, TokenWithPrice>>();
-	for trade in trades {
-		let price_in = tokens[&trade.token_in].price.unwrap_or(0.0);
-		let price_out = tokens[&trade.token_out].price.unwrap_or(0.0);
-		let decimals_in = tokens[&trade.token_in].decimals;
-		let decimals_out = tokens[&trade.token_out].decimals;
-		let amount_in = trade.amount_in as f64 / 10u128.pow(decimals_in as u32) as f64;
-		let amount_out = trade.amount_out as f64 / 10u128.pow(decimals_out as u32) as f64;
-		let volume_in = amount_in * price_in;
-		let volume_out = amount_out * price_out;
-		volume += f64::max(volume_in, volume_out);
-	}
-	Ok(volume)
-}
-
-#[utoipa::path(
-    get,
-    path = "/checker/one_week_volume",
-    responses(
-        (status = 200, description = "JSON file", body = f64)
-    ),
-	params(
-		GetVolumeParams
-	)
-)]
-async fn handle_get_volume(
-	Query(params): Query<GetVolumeParams>,
-	app_state: AppState,
-) -> impl IntoResponse {
-	let result = get_last_week_volume(&params.account, &app_state);
-
-	match result {
-		Ok(volume) => Json(volume).into_response(),
-		Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, format!("Internal server error: {}", e))
-			.into_response(),
-	}
-}
-
-#[derive(Debug, Serialize, ToSchema)]
-struct TradeDisplay {
-	block_num: u32,
-	user: AccountId,
-	/// Symbol of sold token.
-	token_in: String,
-	/// Symbol of bought token.
-	token_out: String,
-	amount_in: f64,
-	amount_out: f64,
-	/// Path of token symbols traded.
-	path: Vec<String>,
-	volume: f64,
-}
-
-fn get_last_week_trades(
+fn get_last_week_trades_and_volume(
 	account: &AccountId,
 	app_state: &AppState,
-) -> anyhow::Result<Vec<TradeDisplay>> {
+) -> anyhow::Result<(Vec<TradeDisplay>, f64)> {
 	let conn = {
 		let pool = app_state.db_pool.lock();
 		pool.get().unwrap()
@@ -189,8 +123,9 @@ fn get_last_week_trades(
 		.collect::<BTreeMap<AccountId, TokenWithPrice>>();
 	let mut swaps = aggregate_trades(trades);
 	swaps.reverse();
-	swaps.truncate(500);
-
+	swaps.truncate(1500);
+	let mut total_volume = 0.0;
+	let whitelist = psp_list();
 	let trades_display = swaps
 		.into_iter()
 		.map(|trade| {
@@ -202,7 +137,13 @@ fn get_last_week_trades(
 			let amount_out = trade.amount_out as f64 / 10u128.pow(decimals_out as u32) as f64;
 			let volume_in = amount_in * price_in;
 			let volume_out = amount_out * price_out;
-			let volume = f64::max(volume_in, volume_out);
+			let volume =
+				if whitelist.contains(&trade.token_in) && whitelist.contains(&trade.token_out) {
+					f64::max(volume_in, volume_out)
+				} else {
+					0.0
+				};
+			total_volume += volume;
 			let path: Vec<_> = trade
 				.path
 				.into_iter()
@@ -221,7 +162,45 @@ fn get_last_week_trades(
 		})
 		.collect();
 
-	Ok(trades_display)
+	Ok((trades_display, total_volume))
+}
+
+#[utoipa::path(
+    get,
+    path = "/checker/one_week_volume",
+    responses(
+        (status = 200, description = "JSON file", body = f64)
+    ),
+	params(
+		GetVolumeParams
+	)
+)]
+async fn handle_get_volume(
+	Query(params): Query<GetVolumeParams>,
+	app_state: AppState,
+) -> impl IntoResponse {
+	let result = get_last_week_trades_and_volume(&params.account, &app_state);
+
+	match result {
+		Ok((_, volume)) => Json(volume).into_response(),
+		Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, format!("Internal server error: {}", e))
+			.into_response(),
+	}
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+struct TradeDisplay {
+	block_num: u32,
+	user: AccountId,
+	/// Symbol of sold token.
+	token_in: String,
+	/// Symbol of bought token.
+	token_out: String,
+	amount_in: f64,
+	amount_out: f64,
+	/// Path of token symbols traded.
+	path: Vec<String>,
+	volume: f64,
 }
 
 #[derive(Debug, Deserialize, IntoParams)]
@@ -243,10 +222,10 @@ async fn handle_get_last_week_trades(
 	Query(params): Query<GetLastWeekTradesParams>,
 	app_state: AppState,
 ) -> impl IntoResponse {
-	let result = get_last_week_trades(&params.account, &app_state);
+	let result = get_last_week_trades_and_volume(&params.account, &app_state);
 
 	match result {
-		Ok(volume) => Json(volume).into_response(),
+		Ok((trades, _)) => Json(trades).into_response(),
 		Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, format!("Internal server error: {}", e))
 			.into_response(),
 	}
