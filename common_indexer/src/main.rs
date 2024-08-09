@@ -8,7 +8,7 @@ use common_indexer::{
 		get_trades_by_origin_with_limit, get_trades_by_range_limited, init_db, Pool, SharedPool,
 	},
 	multiswaps::{aggregate_trades, trade_result_to_multiswaps, MultiSwap},
-	psp_list,
+	psp_list::PSPList,
 	scraper::Endpoints,
 	tokens::{get_price_by_token_address, Token},
 	QueryResultMultiSwaps, COMMON_START_BLOCK,
@@ -50,6 +50,7 @@ pub struct UtoipaApi;
 struct AppState {
 	db_pool: SharedPool,
 	price_feed: PriceFeed,
+	psp_list: PSPList,
 }
 
 #[derive(Debug, Deserialize, IntoParams)]
@@ -125,7 +126,7 @@ fn get_last_week_trades_and_volume(
 	swaps.reverse();
 	swaps.truncate(1500);
 	let mut total_volume = 0.0;
-	let whitelist = psp_list();
+	let whitelist = app_state.psp_list.get();
 	let trades_display = swaps
 		.into_iter()
 		.map(|trade| {
@@ -360,9 +361,11 @@ async fn main() {
 		scraper::run(&endpoints).await;
 	});
 
+	let psp_list = PSPList::new();
 	let shared_pool = get_shared_pool();
 	let price_feed = PriceFeed::new().await.unwrap();
-	let app_state = AppState { db_pool: shared_pool, price_feed };
+
+	let app_state = AppState { db_pool: shared_pool, price_feed, psp_list };
 
 	let app = Router::new()
 		.route(
